@@ -1,10 +1,3 @@
-//
-//  ContentView.swift
-//  TAPN_T+S
-//
-//  Created by Josiah Kondo on 10/6/25.
-//
-
 import SwiftUI
 
 struct ContentView: View {

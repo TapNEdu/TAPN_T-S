@@ -1,17 +1,26 @@
-//
-//  TAPN_T_SApp.swift
-//  TAPN_T+S
-//
-//  Created by Josiah Kondo on 10/6/25.
-//
-
 import SwiftUI
 
 @main
-struct TAPN_T_SApp: App {
+struct TAPN_TeachersApp: App {
+    @StateObject private var app = AppState(api: MockAPIClient())  // swap to RemoteAPIClient later
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            RootView()
+                .environmentObject(app)
+                .preferredColorScheme(.light)
+        }
+    }
+}
+
+private struct RootView: View {
+    @EnvironmentObject var app: AppState
+    var body: some View {
+        Group {
+            switch app.role {
+            case .none:    RoleSelectionView()
+            case .teacher: TeacherHomeView()
+            case .student: StudentHomeView()
+            }
         }
     }
 }
