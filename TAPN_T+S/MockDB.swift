@@ -48,7 +48,7 @@ struct MockAPIClient: TAPNAPI {
         return await db.list()
     }
 
-    func createClass(subject: String, timeLabel: String) async throws -> ClassSession {
+    func createClass(subject: String, timeLabel: String, teacherId: UUID) async throws -> ClassSession {
         try await Task.sleep(nanoseconds: latency)
         let new = ClassSession(subject: subject, timeLabel: timeLabel, students: MockData.defaultRoster())
         return await db.insert(new)
@@ -95,7 +95,7 @@ struct MockAPIClient: TAPNAPI {
         }
     }
 
-    func studentTapIn(classID: UUID, studentName: String) async throws -> ClassSession {
+    func studentTapIn(classID: UUID, userId: UUID, studentName: String) async throws -> ClassSession {
         try await Task.sleep(nanoseconds: latency)
         return try await db.update(classID) { c in
             if let i = c.students.firstIndex(where: { $0.name == studentName }) {
@@ -107,10 +107,10 @@ struct MockAPIClient: TAPNAPI {
         }
     }
 
-    func studentTapOut(classID: UUID, studentName: String) async throws -> ClassSession {
+    func studentTapOut(classID: UUID, userId: UUID) async throws -> ClassSession {
         try await Task.sleep(nanoseconds: latency)
         return try await db.update(classID) { c in
-            if let i = c.students.firstIndex(where: { $0.name == studentName }) {
+            if let i = c.students.firstIndex(where: { $0.id == userId }) {
                 c.students[i].tappedOutAt = Date()
             }
         }

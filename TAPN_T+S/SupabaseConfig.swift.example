@@ -1,0 +1,10 @@
+import Foundation
+
+// MARK: - Supabase Configuration Template
+// Copy this file to SupabaseConfig.swift and replace with your actual credentials
+// Get your credentials from: https://app.supabase.com/project/_/settings/api
+
+struct SupabaseConfig {
+    static let url = "https://YOUR_PROJECT_ID.supabase.co"
+    static let anonKey = "YOUR_ANON_KEY_HERE"
+}

@@ -2,6 +2,18 @@ import Foundation
 import SwiftUI
 import Combine
 import CoreNFC
+import Supabase
+
+enum AppStateError: LocalizedError {
+    case notAuthenticated
+
+    var errorDescription: String? {
+        switch self {
+        case .notAuthenticated:
+            return "Please sign in with your school email to record attendance"
+        }
+    }
+}
 
 @MainActor
 final class AppState: ObservableObject {
@@ -9,10 +21,13 @@ final class AppState: ObservableObject {
 
     private var pollEvery: TimeInterval?
     private var poller: AnyCancellable?
+    private var authStateListener: Task<Void, Never>?
+
+    @Published var isAuthenticated: Bool = false
+    @Published var currentUser: User?
+    @Published var userProfile: UserProfile?
 
     @Published var role: UserRole = .none
-    @Published var teacherName: String = ""
-    @Published var studentName: String = "You"
 
     @Published var classes: [ClassSession] = []
     @Published var activeClassID: UUID? = nil
@@ -23,12 +38,111 @@ final class AppState: ObservableObject {
         self.api = api
         self.pollEvery = pollingInterval
 
-        NFCManager.shared.onTag = { [weak self] studentName in
-            guard let self else { return }
-            self.handleNFCTap(studentName: studentName)
+        Task {
+            await checkAuthSession()
+            await bootstrap()
+            setupAuthStateListener()
+        }
+    }
+
+    private func checkAuthSession() async {
+        do {
+            let session = try await supabase.auth.session
+            currentUser = session.user
+            isAuthenticated = true
+            await loadUserProfile()
+        } catch {
+            currentUser = nil
+            isAuthenticated = false
+            userProfile = nil
+        }
+    }
+
+    func loadUserProfile() async {
+        guard let userId = currentUser?.id else {
+            userProfile = nil
+            role = .none
+            return
         }
 
-        Task { await bootstrap() }
+        do {
+            if let apiClient = api as? SupabaseAPIClient {
+                userProfile = try await apiClient.getUserProfile(userId: userId)
+                role = userProfile?.role ?? .none
+            }
+        } catch {
+            userProfile = nil
+            role = .none
+        }
+    }
+
+    private func setupAuthStateListener() {
+        authStateListener = Task {
+            for await (event, session) in supabase.auth.authStateChanges {
+                await handleAuthStateChange(event, session: session)
+            }
+        }
+    }
+
+    private func handleAuthStateChange(_ event: AuthChangeEvent, session: Session?) async {
+        switch event {
+        case .signedIn, .tokenRefreshed, .userUpdated:
+            if let session = session {
+                currentUser = session.user
+                isAuthenticated = true
+                await loadUserProfile()
+            } else {
+                currentUser = nil
+                isAuthenticated = false
+            }
+        case .signedOut:
+            currentUser = nil
+            isAuthenticated = false
+            userProfile = nil
+            role = .none
+        default:
+            break
+        }
+    }
+
+    func createUserProfile(role: UserRole?, name: String) async throws {
+        guard let userId = currentUser?.id,
+              let email = currentUser?.email else {
+            throw AppStateError.notAuthenticated
+        }
+
+        if let apiClient = api as? SupabaseAPIClient {
+            userProfile = try await apiClient.createUserProfile(
+                userId: userId,
+                email: email,
+                role: role,
+                name: name
+            )
+            self.role = userProfile?.role ?? .none
+        }
+    }
+
+    func switchRole(to newRole: UserRole) async throws {
+        guard let userId = currentUser?.id else {
+            throw AppStateError.notAuthenticated
+        }
+
+        if let apiClient = api as? SupabaseAPIClient {
+            userProfile = try await apiClient.updateUserRole(userId: userId, role: newRole)
+            role = newRole
+        }
+    }
+
+    func signOut() async {
+        do {
+            try await GoogleAuthManager.shared.signOut()
+        } catch {
+            // Handle error silently for now
+        }
+    }
+
+    deinit {
+        authStateListener?.cancel()
     }
 
     func bootstrap() async {
@@ -55,13 +169,33 @@ final class AppState: ObservableObject {
         stopPoller()
     }
 
-    func resetToRoleSelection() { role = .none; teacherName = "" }
+    func resetToRoleSelection() { role = .none }
     func setRole(_ r: UserRole) { role = r }
 
     func addClass(subject: String, timeLabel: String) {
+        guard let teacherId = currentUser?.id else {
+            print("❌ addClass failed: No teacherId")
+            return
+        }
+
+        print("🔄 Creating class: \(subject) at \(timeLabel)")
+        print("   Teacher ID: \(teacherId)")
+        print("   Is authenticated: \(isAuthenticated)")
+
         Task {
-            if let created = try? await api.createClass(subject: subject, timeLabel: timeLabel) {
+            do {
+                guard let apiClient = api as? SupabaseAPIClient else {
+                    print("❌ API client is not SupabaseAPIClient")
+                    return
+                }
+
+                let created = try await apiClient.createClass(subject: subject, timeLabel: timeLabel, teacherId: teacherId)
+                print("✅ Class created successfully: \(created.id)")
                 classes.insert(created, at: 0)
+            } catch {
+                print("❌ Failed to create class:")
+                print("   Error: \(error)")
+                print("   Localized: \(error.localizedDescription)")
             }
         }
     }
@@ -153,30 +287,72 @@ final class AppState: ObservableObject {
         poller = nil
     }
 
-    func studentTapIn() {
-        guard let id = activeClassID else { return }
-        Task {
-            if let updated = try? await api.studentTapIn(classID: id, studentName: studentName) {
-                replace(updated)
-            }
+    func studentTapIn() async throws {
+        guard let id = activeClassID,
+              let userId = currentUser?.id,
+              let studentName = userProfile?.name else {
+            throw AppStateError.notAuthenticated
         }
+
+        guard let apiClient = api as? SupabaseAPIClient else { return }
+        let updated = try await apiClient.studentTapIn(classID: id, userId: userId, studentName: studentName)
+        replace(updated)
     }
     func studentTapOut() {
-        guard let id = activeClassID else { return }
+        guard let id = activeClassID,
+              let userId = currentUser?.id else { return }
         Task {
-            if let updated = try? await api.studentTapOut(classID: id, studentName: studentName) {
+            if let apiClient = api as? SupabaseAPIClient,
+               let updated = try? await apiClient.studentTapOut(classID: id, userId: userId) {
                 replace(updated)
             }
         }
     }
 
-    func handleNFCTap(studentName: String) {
-        guard let id = activeClassID else { return }
-        Task {
-            if let updated = try? await api.studentTapIn(classID: id, studentName: studentName) {
-                replace(updated)
+    // MARK: - Roster Management
+
+    func addStudentToRoster(classId: UUID, studentEmail: String) async throws {
+        guard let userId = currentUser?.id else {
+            throw AppStateError.notAuthenticated
+        }
+
+        if let apiClient = api as? SupabaseAPIClient {
+            let updated = try await apiClient.addStudentToRoster(
+                classId: classId,
+                studentEmail: studentEmail,
+                addedBy: userId
+            )
+            replace(updated)
+        }
+    }
+
+    func removeStudentFromRoster(classId: UUID, studentUserId: UUID) async throws {
+        if let apiClient = api as? SupabaseAPIClient {
+            let updated = try await apiClient.removeStudentFromRoster(
+                classId: classId,
+                studentUserId: studentUserId
+            )
+            replace(updated)
+        }
+    }
+
+    func loadStudentClasses() async {
+        guard let userId = currentUser?.id else { return }
+
+        if let apiClient = api as? SupabaseAPIClient {
+            do {
+                classes = try await apiClient.getStudentClasses(userId: userId)
+            } catch {
+                // Handle error silently for now
             }
         }
+    }
+
+    func searchUsersByEmail(query: String) async throws -> [UserProfile] {
+        guard let apiClient = api as? SupabaseAPIClient else {
+            return []
+        }
+        return try await apiClient.searchUsersByEmail(query: query)
     }
 
     private func replace(_ cls: ClassSession) {

@@ -35,9 +35,9 @@ struct RemoteAPIClient: TAPNAPI {
     func bootstrap() async throws -> [ClassSession] {
         try await request("/api/classes")
     }
-    func createClass(subject: String, timeLabel: String) async throws -> ClassSession {
-        struct Body: Encodable { let subject: String; let timeLabel: String }
-        return try await request("/api/classes", method: "POST", body: Body(subject: subject, timeLabel: timeLabel))
+    func createClass(subject: String, timeLabel: String, teacherId: UUID) async throws -> ClassSession {
+        struct Body: Encodable { let subject: String; let timeLabel: String; let teacherId: UUID }
+        return try await request("/api/classes", method: "POST", body: Body(subject: subject, timeLabel: timeLabel, teacherId: teacherId))
     }
     func getClass(id: UUID) async throws -> ClassSession {
         try await request("/api/classes/\(id.uuidString)")
@@ -56,13 +56,17 @@ struct RemoteAPIClient: TAPNAPI {
     func endClass(classID: UUID) async throws -> ClassSession {
         try await request("/api/classes/\(classID.uuidString)/end", method: "POST", body: EmptyBody())
     }
+    func studentTapIn(classID: UUID, userId: UUID, studentName: String) async throws -> ClassSession {
+        struct Body: Encodable { let userId: UUID; let studentName: String }
+        return try await request("/api/classes/\(classID.uuidString)/tapin", method: "POST", body: Body(userId: userId, studentName: studentName))
+    }
     func studentTapIn(classID: UUID, studentName: String) async throws -> ClassSession {
         struct Body: Encodable { let studentName: String }
         return try await request("/api/classes/\(classID.uuidString)/tapin", method: "POST", body: Body(studentName: studentName))
     }
-    func studentTapOut(classID: UUID, studentName: String) async throws -> ClassSession {
-        struct Body: Encodable { let studentName: String }
-        return try await request("/api/classes/\(classID.uuidString)/tapout", method: "POST", body: Body(studentName: studentName))
+    func studentTapOut(classID: UUID, userId: UUID) async throws -> ClassSession {
+        struct Body: Encodable { let userId: UUID }
+        return try await request("/api/classes/\(classID.uuidString)/tapout", method: "POST", body: Body(userId: userId))
     }
     
     func setAllowedApps(classID: UUID, allowed: Set<AllowedApp>) async throws -> ClassSession {

@@ -59,16 +59,17 @@ struct StudentTapOutView: View {
     }
 
     private func beginTapOutScan() {
-        NFCManager.shared.onTag = { _ in
-            print("NFC tag detected for tap-out:", app.studentName)
+        NFCManager.shared.onTag = { [weak app, self] _ in
+            guard let app = app else { return }
+            print("NFC tag detected for tap-out:", app.userProfile?.name ?? "Unknown")
             app.studentTapOut()
 
             withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                showSuccess = true
+                self.showSuccess = true
             }
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                 withAnimation(.easeOut(duration: 0.25)) {
-                    showSuccess = false
+                    self.showSuccess = false
                 }
             }
         }

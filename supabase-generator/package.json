@@ -1,0 +1,29 @@
+{
+  "name": "supabase-generator",
+  "version": "1.0.0",
+  "description": "Claude Agent SDK powered code generator for Supabase backend",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "generate": "tsx src/index.ts",
+    "build": "tsc",
+    "dev": "tsx watch src/index.ts"
+  },
+  "keywords": [
+    "supabase",
+    "claude",
+    "code-generation",
+    "ai"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.1.0",
+    "dotenv": "^17.2.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.0"
+  }
+}

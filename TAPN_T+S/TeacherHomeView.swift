@@ -3,6 +3,7 @@ import SwiftUI
 struct TeacherHomeView: View {
     @EnvironmentObject var app: AppState
     @State private var showAdd = false
+    @State private var showRoleSwitcher = false
 
     var body: some View {
         NavigationStack {
@@ -61,7 +62,18 @@ struct TeacherHomeView: View {
             .navigationTitle("my classes")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("back") { app.resetToRoleSelection() }.foregroundStyle(.white)
+                    Menu {
+                        Button(action: { showRoleSwitcher = true }) {
+                            Label("Switch to Student", systemImage: "arrow.left.arrow.right")
+                        }
+                        Button(action: { Task { await app.signOut() } }) {
+                            Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
+                        }
+                    } label: {
+                        Image(systemName: "person.circle.fill")
+                            .font(.title3)
+                            .foregroundStyle(.white)
+                    }
                 }
             }
             .sheet(isPresented: $showAdd) {
@@ -70,8 +82,16 @@ struct TeacherHomeView: View {
                 }
                 .presentationDetents([.fraction(0.35), .medium])
             }
-
-
+            .confirmationDialog("Switch Role", isPresented: $showRoleSwitcher) {
+                Button("Switch to Student") {
+                    Task {
+                        try? await app.switchRole(to: .student)
+                    }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Are you sure you want to switch to student mode?")
+            }
         }
     }
 }
