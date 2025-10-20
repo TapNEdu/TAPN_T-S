@@ -60,10 +60,6 @@ struct RemoteAPIClient: TAPNAPI {
         struct Body: Encodable { let userId: UUID; let studentName: String }
         return try await request("/api/classes/\(classID.uuidString)/tapin", method: "POST", body: Body(userId: userId, studentName: studentName))
     }
-    func studentTapIn(classID: UUID, studentName: String) async throws -> ClassSession {
-        struct Body: Encodable { let studentName: String }
-        return try await request("/api/classes/\(classID.uuidString)/tapin", method: "POST", body: Body(studentName: studentName))
-    }
     func studentTapOut(classID: UUID, userId: UUID) async throws -> ClassSession {
         struct Body: Encodable { let userId: UUID }
         return try await request("/api/classes/\(classID.uuidString)/tapout", method: "POST", body: Body(userId: userId))
