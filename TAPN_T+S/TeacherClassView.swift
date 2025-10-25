@@ -6,6 +6,8 @@ struct TeacherClassView: View {
 
     @State private var showingTime = false
     @State private var showingAllowedApps = false
+    @State private var showingAddStudent = false
+    @State private var showingRoster = false
 
     @State private var remainingSeconds: Int? = nil
 
@@ -16,6 +18,32 @@ struct TeacherClassView: View {
             if let cls = app.classes.first(where: { $0.id == classID }) {
 
                 VStack(spacing: 16) {
+                    // Roster and Attendance
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Text("Roster (\(cls.roster.count))")
+                                .font(.headline)
+                                .foregroundStyle(.white)
+                            Spacer()
+                            Button(action: { showingRoster = true }) {
+                                Text("Manage")
+                                    .font(.caption)
+                                    .foregroundStyle(.blue)
+                            }
+                        }
+                        .padding(.horizontal)
+                        .padding(.top, 8)
+
+                        if cls.roster.isEmpty {
+                            Text("No students on roster. Tap 'Manage' to add students.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .padding(.horizontal)
+                                .padding(.bottom, 8)
+                        }
+                    }
+
+                    // Attendance List
                     List {
                         ForEach(cls.students) { s in
                             HStack {
@@ -105,6 +133,10 @@ struct TeacherClassView: View {
                 .sheet(isPresented: $showingAllowedApps) {
                     SetAllowedAppsView(classID: classID)
                         .presentationDetents([.fraction(0.45), .medium])
+                        .environmentObject(app)
+                }
+                .sheet(isPresented: $showingRoster) {
+                    ClassRosterManagementView(classSession: cls)
                         .environmentObject(app)
                 }
 

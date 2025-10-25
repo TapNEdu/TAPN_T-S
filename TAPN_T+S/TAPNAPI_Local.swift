@@ -5,6 +5,7 @@ final class TAPNAPI_Local: TAPNAPI {
     private let teacher: LegacyTeacher
 
     private var classMap: [UUID: LegacyClass] = [:]
+    private var userToStudentMap: [UUID: (LegacyStudent, UUID)] = [:] // userId -> (student, classID)
 
     private var durationByID: [UUID: Int] = [:]
     private var categoriesByID: [UUID: Set<AppCategory>] = [:]
@@ -72,7 +73,7 @@ final class TAPNAPI_Local: TAPNAPI {
         return [toSession(sci, id: id)]
     }
 
-    func createClass(subject: String, timeLabel: String) async throws -> ClassSession {
+    func createClass(subject: String, timeLabel: String, teacherId: UUID) async throws -> ClassSession {
         let cls = LegacyClass(teacher: teacher, ID: subject, startTime: timeLabel)
         school.addClass(cls)
         teacher.classes.append(cls)
@@ -127,24 +128,27 @@ final class TAPNAPI_Local: TAPNAPI {
     }
 
 
-    func studentTapIn(classID: UUID, studentName: String) async throws -> ClassSession {
+    func studentTapIn(classID: UUID, userId: UUID, studentName: String) async throws -> ClassSession {
         guard let cls = classMap[classID] else { throw APIError.notFound }
 
         if let found = cls.students.first(where: { $0.name == studentName }) {
             cls.modifyAttendance(found, LegacyAttendanceStatus.present)
+            userToStudentMap[userId] = (found, classID)
         } else {
             let temp = LegacyStudent(name: studentName, preferedName: studentName, grade: "10", ID: UUID().uuidString, school: school)
             temp.classes.append(cls)
             cls.addStudent(temp)
             cls.modifyAttendance(temp, LegacyAttendanceStatus.present)
+            userToStudentMap[userId] = (temp, classID)
         }
         return toSession(cls, id: classID)
     }
 
-    func studentTapOut(classID: UUID, studentName: String) async throws -> ClassSession {
+    func studentTapOut(classID: UUID, userId: UUID) async throws -> ClassSession {
         guard let cls = classMap[classID] else { throw APIError.notFound }
-        if let found = cls.students.first(where: { $0.name == studentName }) {
-            cls.modifyAttendance(found, "dismiss", "\(studentName) tapped out")
+        
+        if let (student, _) = userToStudentMap[userId] {
+            cls.modifyAttendance(student, "dismiss", "\(student.name) tapped out")
         }
         return toSession(cls, id: classID)
     }

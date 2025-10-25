@@ -28,8 +28,11 @@ struct RoleSelectionView: View {
                         }
                         .background(AppTheme.roundedField())
                         Button {
-                            app.teacherName = teacherName.trimmingCharacters(in: .whitespacesAndNewlines)
-                            app.setRole(.teacher)
+                            let trimmedName = teacherName.trimmingCharacters(in: .whitespacesAndNewlines)
+                            Task {
+                                try? await app.createUserProfile(role: .teacher, name: trimmedName)
+                                app.setRole(.teacher)
+                            }
                         } label: {
                             fullWidthButtonLabel("enter as teacher")
                         }
@@ -48,8 +51,12 @@ struct RoleSelectionView: View {
                         }
                         .background(AppTheme.roundedField())
                         Button {
-                            app.studentName = studentName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "You" : studentName
-                            app.setRole(.student)
+                            let trimmedName = studentName.trimmingCharacters(in: .whitespacesAndNewlines)
+                            let finalName = trimmedName.isEmpty ? "Student" : trimmedName
+                            Task {
+                                try? await app.createUserProfile(role: .student, name: finalName)
+                                app.setRole(.student)
+                            }
                         } label: {
                             fullWidthButtonLabel("enter as student")
                         }

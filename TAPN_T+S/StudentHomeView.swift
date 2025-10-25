@@ -5,6 +5,9 @@ struct StudentHomeView: View {
 
     @State private var showSuccess = false
     @State private var navigateToInClass = false
+    @State private var showRoleSwitcher = false
+    @State private var errorMessage: String?
+    @State private var showError = false
 
     var body: some View {
         NavigationStack {
@@ -12,6 +15,26 @@ struct StudentHomeView: View {
                 AppTheme.bg.ignoresSafeArea()
 
                 VStack(spacing: 22) {
+                    // Show rostered classes
+                    if !app.classes.isEmpty {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Your Classes")
+                                .font(.headline)
+                                .foregroundStyle(.white)
+                                .padding(.horizontal)
+
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 12) {
+                                    ForEach(app.classes) { cls in
+                                        ClassCard(classSession: cls)
+                                    }
+                                }
+                                .padding(.horizontal)
+                            }
+                        }
+                        .padding(.top)
+                    }
+
                     Spacer()
                     Text("tap to tap-in")
                         .font(.largeTitle.weight(.bold))
@@ -30,9 +53,16 @@ struct StudentHomeView: View {
                     .disabled(app.activeClass == nil)
                     .opacity(app.activeClass == nil ? 0.5 : 1)
 
-                    Button(role: .cancel) {
-                        app.resetToRoleSelection()
-                    } label: { ghostButton("cancel") }
+                    Menu {
+                        Button(action: { showRoleSwitcher = true }) {
+                            Label("Switch to Teacher", systemImage: "arrow.left.arrow.right")
+                        }
+                        Button(action: { Task { await app.signOut() } }) {
+                            Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
+                        }
+                    } label: {
+                        ghostButton("menu")
+                    }
 
                     Spacer()
 
@@ -46,12 +76,58 @@ struct StudentHomeView: View {
                 }
                 .padding()
                 .navigationTitle("student")
+                .onAppear {
+                    Task {
+                        await app.loadStudentClasses()
+                    }
+                }
 
                 if showSuccess {
                     SuccessOverlay(title: "Tap-in successful!")
                         .transition(.scale.combined(with: .opacity))
                         .zIndex(1)
                 }
+
+                if showError, let errorMessage = errorMessage {
+                    VStack(spacing: 16) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 48))
+                            .foregroundColor(.red)
+
+                        Text("Tap-in Failed")
+                            .font(.headline)
+                            .foregroundColor(.white)
+
+                        Text(errorMessage)
+                            .font(.subheadline)
+                            .foregroundColor(.white)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal)
+
+                        Button("Dismiss") {
+                            withAnimation {
+                                showError = false
+                            }
+                        }
+                        .buttonStyle(.borderedProminent)
+                    }
+                    .padding(32)
+                    .background(Color.black.opacity(0.9))
+                    .cornerRadius(20)
+                    .shadow(radius: 20)
+                    .transition(.scale.combined(with: .opacity))
+                    .zIndex(2)
+                }
+            }
+            .confirmationDialog("Switch Role", isPresented: $showRoleSwitcher) {
+                Button("Switch to Teacher") {
+                    Task {
+                        try? await app.switchRole(to: .teacher)
+                    }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Are you sure you want to switch to teacher mode?")
             }
         }
     }
@@ -59,18 +135,28 @@ struct StudentHomeView: View {
     private func beginScan() {
         guard app.activeClass != nil else { return }
 
-        NFCManager.shared.onTag = { _ in
-            print("NFC tag detected for student:", app.studentName)
-            app.studentTapIn()
+        NFCManager.shared.onTag = { [self] _ in
+            print("NFC tag detected for student:", app.userProfile?.name ?? "Unknown")
 
-            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                showSuccess = true
-            }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                withAnimation(.easeOut(duration: 0.25)) {
-                    showSuccess = false
+            Task { @MainActor in
+                do {
+                    try await app.studentTapIn()
+
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                        showSuccess = true
+                    }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                        withAnimation(.easeOut(duration: 0.25)) {
+                            showSuccess = false
+                        }
+                        navigateToInClass = true
+                    }
+                } catch {
+                    errorMessage = error.localizedDescription
+                    withAnimation {
+                        showError = true
+                    }
                 }
-                navigateToInClass = true
             }
         }
 
@@ -98,5 +184,33 @@ struct StudentHomeView: View {
     }
 }
 
+struct ClassCard: View {
+    let classSession: ClassSession
 
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(classSession.subject)
+                .font(.headline)
+                .foregroundStyle(.white)
 
+            Text(classSession.timeLabel)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            if classSession.isActive {
+                HStack(spacing: 4) {
+                    Circle()
+                        .fill(.green)
+                        .frame(width: 8, height: 8)
+                    Text("Active")
+                        .font(.caption2)
+                        .foregroundStyle(.green)
+                }
+            }
+        }
+        .padding()
+        .frame(width: 160)
+        .background(AppTheme.card)
+        .cornerRadius(12)
+    }
+}
