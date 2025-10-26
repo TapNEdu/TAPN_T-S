@@ -12,8 +12,8 @@ struct TeacherHomeView: View {
                     VStack(spacing: 12) {
                         Image(systemName: "rectangle.and.text.magnifyingglass")
                             .font(.system(size: 40))
-                            .foregroundStyle(.white.opacity(0.7))
-                        Text("my classes").foregroundStyle(.white).font(.title3.weight(.semibold))
+                            .foregroundStyle(AppTheme.subtext)
+                        Text("my classes").foregroundStyle(AppTheme.text).font(.title3.weight(.semibold))
                         Text("add a class to get started").foregroundStyle(AppTheme.subtext)
                     }
                 } else {
@@ -24,7 +24,7 @@ struct TeacherHomeView: View {
                             } label: {
                                 HStack {
                                     VStack(alignment: .leading, spacing: 4) {
-                                        Text(cls.subject).foregroundStyle(.white).font(.headline)
+                                        Text(cls.subject).foregroundStyle(AppTheme.text).font(.headline)
                                         Text(cls.timeLabel).foregroundStyle(AppTheme.subtext).font(.subheadline)
                                     }
                                     Spacer()
@@ -61,7 +61,7 @@ struct TeacherHomeView: View {
             .navigationTitle("my classes")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("back") { app.resetToRoleSelection() }.foregroundStyle(.white)
+                    Button("back") { app.resetToRoleSelection() }.foregroundStyle(AppTheme.text)
                 }
             }
             .sheet(isPresented: $showAdd) {
@@ -70,8 +70,7 @@ struct TeacherHomeView: View {
                 }
                 .presentationDetents([.fraction(0.35), .medium])
             }
-
-
         }
     }
+    
 }

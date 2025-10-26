@@ -1,13 +1,33 @@
 import SwiftUI
 
 enum AppTheme {
-    static let bg = Color(white: 0.12)          
-    static let card = Color(white: 0.18)
-    static let field = Color(white: 0.22)
-    static let text = Color.white
-    static let subtext = Color.white.opacity(0.75)
-    static let line = Color.white.opacity(0.10)
-    static let accent = Color(white: 0.05)
+    // Background gradient colors
+    static let bgTop = Color(red: 250/255, green: 248/255, blue: 242/255)      // #FAF8F2
+    static let bgMiddle = Color(red: 245/255, green: 242/255, blue: 235/255)   // #F5F2EB  
+    static let bgBottom = Color(red: 240/255, green: 236/255, blue: 228/255)   // #F0ECE4
+    
+    // Sage green colors with better contrast
+    static let sageGreen = Color(red: 143/255, green: 168/255, blue: 145/255) // #8FA891
+    static let sageGreenDark = Color(red: 100/255, green: 130/255, blue: 105/255) // Darker sage for better contrast
+    static let sageGreenLight = Color(red: 180/255, green: 200/255, blue: 185/255) // Lighter sage for backgrounds
+    
+    // Text colors with high contrast
+    static let darkText = Color(red: 45/255, green: 55/255, blue: 50/255)       // Much darker for readability
+    static let lightText = Color(red: 250/255, green: 248/255, blue: 242/255)  // #FAF8F2
+    static let mediumText = Color(red: 70/255, green: 85/255, blue: 75/255)     // Medium contrast text
+    
+    // Legacy colors for compatibility with better contrast
+    static let bg = LinearGradient(
+        colors: [bgTop, bgMiddle, bgBottom],
+        startPoint: .top,
+        endPoint: .bottom
+    )
+    static let card = sageGreenLight.opacity(0.3)  // More visible card backgrounds
+    static let field = sageGreenLight.opacity(0.4) // More visible input fields
+    static let text = darkText                     // High contrast text
+    static let subtext = mediumText                 // Medium contrast for secondary text
+    static let line = sageGreenDark.opacity(0.6)   // More visible borders
+    static let accent = sageGreenDark               // Darker accent for better contrast
 
     static let present = Color.green.opacity(0.9)
     static let absent = Color.gray.opacity(0.8)
@@ -27,7 +47,7 @@ enum AppTheme {
         RoundedRectangle(cornerRadius: 16, style: .continuous)
             .fill(card)
             .overlay(RoundedRectangle(cornerRadius: 16).stroke(line))
-            .shadow(color: .black.opacity(0.25), radius: 14, x: 0, y: 10)
+            .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
     }
 
     static func statusDot(_ color: Color) -> some View {

@@ -30,12 +30,12 @@ struct SetCategoriesView: View {
                 )
                 .navigationTitle("select categories")
                 .toolbar {
-                    ToolbarItem(placement: .cancellationAction) { Button("back") { dismiss() }.foregroundStyle(.white) }
+                    ToolbarItem(placement: .cancellationAction) { Button("back") { dismiss() }.foregroundStyle(AppTheme.text) }
                     ToolbarItem(placement: .confirmationAction) {
                         Button("apply") {
                             app.setCategories(for: classID, selection)
                             dismiss()
-                        }.foregroundStyle(.white)
+                        }.foregroundStyle(AppTheme.text)
                     }
                 }
         }

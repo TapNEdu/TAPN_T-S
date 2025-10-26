@@ -5,6 +5,8 @@ import CoreNFC
 
 @MainActor
 final class AppState: ObservableObject {
+    static let shared = AppState(api: TAPNAPI_Local())
+    
     let api: TAPNAPI
 
     private var pollEvery: TimeInterval?
@@ -16,10 +18,14 @@ final class AppState: ObservableObject {
 
     @Published var classes: [ClassSession] = []
     @Published var activeClassID: UUID? = nil
+    
+    // Global store for LegacyClass instances
+    @Published var legacyClasses: [LegacyClass] = []
 
     private var ticker: AnyCancellable?
 
     init(api: TAPNAPI, pollingInterval: TimeInterval? = nil) {
+        print("📚 AppState: INIT CALLED - Creating new AppState instance")
         self.api = api
         self.pollEvery = pollingInterval
 
@@ -35,7 +41,24 @@ final class AppState: ObservableObject {
         do {
             let list = try await api.bootstrap()
             classes = list
+            print("📚 AppState: Bootstrap loaded \(list.count) classes")
+            
+            // Also create LegacyClass objects for pre-existing classes
+            for classSession in list {
+                let legacyClass = LegacyClass(
+                    teacher: LegacyTeacher(name: "Teacher", preferedName: "Teacher"),
+                    ID: classSession.id.uuidString
+                )
+                addLegacyClass(legacyClass)
+                print("📚 AppState: Created LegacyClass for bootstrap class: \(classSession.subject) with ID: \(classSession.id.uuidString)")
+            }
+            
+            print("📚 AppState: Bootstrap complete - legacyClasses.count: \(legacyClasses.count)")
+            for (index, legacyClass) in legacyClasses.enumerated() {
+                print("📚 AppState: legacyClasses[\(index)]: \(legacyClass.ID)")
+            }
         } catch {
+            print("📚 AppState: Bootstrap error: \(error)")
             // ignore for prototype
         }
     }
@@ -55,13 +78,50 @@ final class AppState: ObservableObject {
         stopPoller()
     }
 
-    func resetToRoleSelection() { role = .none; teacherName = "" }
-    func setRole(_ r: UserRole) { role = r }
+    func resetToRoleSelection() { 
+        role = .none
+        teacherName = ""
+        activeClassID = nil  // Clear active class when resetting
+    }
+    func setRole(_ r: UserRole) { 
+        role = r
+        if r != .student {
+            // Clear student's active class when switching away from student role
+            activeClassID = nil
+        }
+    }
+    
+    // MARK: - LegacyClass Management
+    
+    func findClass(byID id: String) -> LegacyClass? {
+        print("📚 AppState: findClass called with ID: \(id) - legacyClasses.count: \(legacyClasses.count)")
+        return legacyClasses.first { $0.ID == id }
+    }
+    
+    func addLegacyClass(_ class: LegacyClass) {
+        legacyClasses.append(`class`)
+        print("📚 AppState: Added LegacyClass with ID: \(`class`.ID) - legacyClasses.count now: \(legacyClasses.count)")
+    }
+    
+    func updateLegacyClass(_ class: LegacyClass) {
+        if let index = legacyClasses.firstIndex(where: { $0.ID == `class`.ID }) {
+            legacyClasses[index] = `class`
+            print("📚 AppState: Updated LegacyClass with ID: \(`class`.ID)")
+        }
+    }
 
     func addClass(subject: String, timeLabel: String) {
         Task {
             if let created = try? await api.createClass(subject: subject, timeLabel: timeLabel) {
                 classes.insert(created, at: 0)
+                
+                // Also create and store the corresponding LegacyClass for app blocking
+                let legacyClass = LegacyClass(
+                    teacher: LegacyTeacher(name: teacherName, preferedName: teacherName),
+                    ID: created.id.uuidString
+                )
+                addLegacyClass(legacyClass)
+                print("📚 AppState: Created LegacyClass for new class: \(created.subject) with ID: \(created.id.uuidString)")
             }
         }
     }
