@@ -4,7 +4,6 @@ struct StudentHomeView: View {
     @EnvironmentObject var app: AppState
 
     @State private var showSuccess = false
-    @State private var navigateToInClass = false
     @State private var showRoleSwitcher = false
     @State private var errorMessage: String?
     @State private var showError = false
@@ -65,14 +64,6 @@ struct StudentHomeView: View {
                     }
 
                     Spacer()
-
-                    NavigationLink(isActive: $navigateToInClass) {
-                        StudentInClassView()
-                            .environmentObject(app)
-                    } label: {
-                        EmptyView()
-                    }
-                    .hidden()
                 }
                 .padding()
                 .navigationTitle("student")
@@ -149,7 +140,6 @@ struct StudentHomeView: View {
                         withAnimation(.easeOut(duration: 0.25)) {
                             showSuccess = false
                         }
-                        navigateToInClass = true
                     }
                 } catch {
                     errorMessage = error.localizedDescription
