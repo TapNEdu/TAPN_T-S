@@ -25,7 +25,15 @@ struct StudentHomeView: View {
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 12) {
                                     ForEach(app.classes) { cls in
-                                        ClassCard(classSession: cls)
+                                        ClassCard(
+                                            classSession: cls,
+                                            isSelected: app.activeClassID == cls.id,
+                                            onTap: {
+                                                if cls.isActive {
+                                                    app.activeClassID = cls.id
+                                                }
+                                            }
+                                        )
                                     }
                                 }
                                 .padding(.horizontal)
@@ -176,6 +184,8 @@ struct StudentHomeView: View {
 
 struct ClassCard: View {
     let classSession: ClassSession
+    var isSelected: Bool = false
+    var onTap: (() -> Void)? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -192,15 +202,27 @@ struct ClassCard: View {
                     Circle()
                         .fill(.green)
                         .frame(width: 8, height: 8)
-                    Text("Active")
+                    Text(isSelected ? "Selected" : "Active")
                         .font(.caption2)
                         .foregroundStyle(.green)
                 }
+            } else {
+                Text("Not Started")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
             }
         }
         .padding()
         .frame(width: 160)
-        .background(AppTheme.card)
+        .background(isSelected ? Color.green.opacity(0.3) : AppTheme.card)
         .cornerRadius(12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(isSelected ? Color.green : Color.clear, lineWidth: 2)
+        )
+        .onTapGesture {
+            onTap?()
+        }
+        .opacity(classSession.isActive ? 1.0 : 0.5)
     }
 }

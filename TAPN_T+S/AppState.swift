@@ -99,6 +99,11 @@ final class AppState: ObservableObject {
                 currentUser = session.user
                 isAuthenticated = true
                 await loadUserProfile()
+
+                // Reload classes after sign in
+                if event == .signedIn {
+                    await bootstrap()
+                }
             } else {
                 currentUser = nil
                 isAuthenticated = false

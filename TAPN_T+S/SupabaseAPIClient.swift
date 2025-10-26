@@ -132,7 +132,7 @@ struct SupabaseAPIClient: TAPNAPI {
             .from("class_sessions")
             .update(["settings": updatedSettings])
             .eq("id", value: classID.uuidString)
-            .select("*, students(*)")
+            .select("*, students(*), roster:class_rosters(*)")
             .single()
             .execute()
             .value
@@ -159,7 +159,7 @@ struct SupabaseAPIClient: TAPNAPI {
             .from("class_sessions")
             .update(["settings": updatedSettings])
             .eq("id", value: classID.uuidString)
-            .select("*, students(*)")
+            .select("*, students(*), roster:class_rosters(*)")
             .single()
             .execute()
             .value
@@ -186,7 +186,7 @@ struct SupabaseAPIClient: TAPNAPI {
             .from("class_sessions")
             .update(["settings": updatedSettings])
             .eq("id", value: classID.uuidString)
-            .select("*, students(*)")
+            .select("*, students(*), roster:class_rosters(*)")
             .single()
             .execute()
             .value
@@ -203,7 +203,7 @@ struct SupabaseAPIClient: TAPNAPI {
                 "end_time": nil as String?
             ])
             .eq("id", value: classID.uuidString)
-            .select("*, students(*)")
+            .select("*, students(*), roster:class_rosters(*)")
             .single()
             .execute()
             .value
@@ -217,7 +217,7 @@ struct SupabaseAPIClient: TAPNAPI {
             .from("class_sessions")
             .update(["end_time": ISO8601DateFormatter().string(from: Date())])
             .eq("id", value: classID.uuidString)
-            .select("*, students(*)")
+            .select("*, students(*), roster:class_rosters(*)")
             .single()
             .execute()
             .value
