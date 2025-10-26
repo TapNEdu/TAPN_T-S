@@ -307,10 +307,12 @@ struct SupabaseAPIClient: TAPNAPI {
             throw RosterError.userNotFound
         }
 
-        // Add to roster
+        // Add to roster with student name and email
         let entry = RosterEntryInsert(
             classSessionId: classId,
             studentUserId: studentUser.id,
+            studentName: studentUser.name,
+            studentEmail: studentUser.email,
             addedByUserId: addedBy
         )
 

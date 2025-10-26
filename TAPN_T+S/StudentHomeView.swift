@@ -7,6 +7,7 @@ struct StudentHomeView: View {
     @State private var showRoleSwitcher = false
     @State private var errorMessage: String?
     @State private var showError = false
+    @State private var successAction: String = "Tap-in"
 
     var body: some View {
         NavigationStack {
@@ -43,22 +44,40 @@ struct StudentHomeView: View {
                     }
 
                     Spacer()
-                    Text("tap to tap-in")
-                        .font(.largeTitle.weight(.bold))
-                        .foregroundStyle(.white)
 
-                    Image(systemName: "face.smiling")
-                        .font(.system(size: 96, weight: .thin))
-                        .padding(28)
-                        .background(AppTheme.card)
-                        .clipShape(RoundedRectangle(cornerRadius: 28))
-                        .onTapGesture { beginScan() }
+                    if isTappedIn {
+                        Text("tap to tap-out")
+                            .font(.largeTitle.weight(.bold))
+                            .foregroundStyle(.white)
 
-                    Button {
-                        beginScan()
-                    } label: { fullWidthButton("scan tag") }
-                    .disabled(app.activeClass == nil)
-                    .opacity(app.activeClass == nil ? 0.5 : 1)
+                        Image(systemName: "hand.wave.fill")
+                            .font(.system(size: 96, weight: .thin))
+                            .padding(28)
+                            .background(AppTheme.card)
+                            .clipShape(RoundedRectangle(cornerRadius: 28))
+                            .onTapGesture { tapOut() }
+
+                        Button {
+                            tapOut()
+                        } label: { fullWidthButton("tap out") }
+                    } else {
+                        Text("tap to tap-in")
+                            .font(.largeTitle.weight(.bold))
+                            .foregroundStyle(.white)
+
+                        Image(systemName: "face.smiling")
+                            .font(.system(size: 96, weight: .thin))
+                            .padding(28)
+                            .background(AppTheme.card)
+                            .clipShape(RoundedRectangle(cornerRadius: 28))
+                            .onTapGesture { beginScan() }
+
+                        Button {
+                            beginScan()
+                        } label: { fullWidthButton("scan tag") }
+                        .disabled(app.activeClass == nil)
+                        .opacity(app.activeClass == nil ? 0.5 : 1)
+                    }
 
                     Menu {
                         Button(action: { showRoleSwitcher = true }) {
@@ -82,7 +101,7 @@ struct StudentHomeView: View {
                 }
 
                 if showSuccess {
-                    SuccessOverlay(title: "Tap-in successful!")
+                    SuccessOverlay(title: "\(successAction) successful!")
                         .transition(.scale.combined(with: .opacity))
                         .zIndex(1)
                 }
@@ -93,7 +112,7 @@ struct StudentHomeView: View {
                             .font(.system(size: 48))
                             .foregroundColor(.red)
 
-                        Text("Tap-in Failed")
+                        Text("\(successAction) Failed")
                             .font(.headline)
                             .foregroundColor(.white)
 
@@ -131,7 +150,34 @@ struct StudentHomeView: View {
         }
     }
 
+    private var isTappedIn: Bool {
+        guard let activeClass = app.activeClass,
+              let userId = app.currentUser?.id else {
+            return false
+        }
+
+        // Check if student is in the students list and is currently present
+        return activeClass.students.contains { student in
+            student.userId == userId && student.status == .present
+        }
+    }
+
+    private func tapOut() {
+        successAction = "Tap-out"
+        app.studentTapOut()
+
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+            showSuccess = true
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            withAnimation(.easeOut(duration: 0.25)) {
+                showSuccess = false
+            }
+        }
+    }
+
     private func beginScan() {
+        successAction = "Tap-in"
         guard app.activeClass != nil else { return }
 
         NFCManager.shared.onTag = { [self] _ in

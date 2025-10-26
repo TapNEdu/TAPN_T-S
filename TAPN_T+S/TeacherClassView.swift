@@ -8,8 +8,11 @@ struct TeacherClassView: View {
     @State private var showingAllowedApps = false
     @State private var showingAddStudent = false
     @State private var showingRoster = false
+    @State private var showingNFCWrite = false
 
     @State private var remainingSeconds: Int? = nil
+    @State private var writeSuccess = false
+    @State private var writeError: String?
 
     var body: some View {
         ZStack {
@@ -45,18 +48,17 @@ struct TeacherClassView: View {
 
                     // Attendance List
                     List {
-                        ForEach(cls.students) { s in
+                        ForEach(cls.roster) { rosterEntry in
+                            let student = cls.students.first { $0.userId == rosterEntry.studentUserId }
                             HStack {
-                                Text(s.name).foregroundStyle(.white)
+                                Text(rosterEntry.studentName).foregroundStyle(.gray)
                                 Spacer()
-                                switch s.status {
+                                switch student?.status ?? .absent {
                                 case .present:
                                     Label("present", systemImage: "checkmark.circle.fill")
                                         .foregroundStyle(.green)
-                                case .absent:
+                                case .absent, .tappedOut:
                                     Text("absent").foregroundStyle(.gray)
-                                case .tappedOut:
-                                    Text("tapped out").foregroundStyle(.gray)
                                 }
                             }
                             .listRowBackground(AppTheme.card)
@@ -89,6 +91,15 @@ struct TeacherClassView: View {
                             .font(.largeTitle.bold())
                             .foregroundStyle(.white)
                             .accessibilityAddTraits(.isHeader)
+                    }
+
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button {
+                            showingNFCWrite = true
+                        } label: {
+                            Image(systemName: "wave.3.right")
+                                .foregroundStyle(.white)
+                        }
                     }
 
                     ToolbarItemGroup(placement: .bottomBar) {
@@ -138,6 +149,61 @@ struct TeacherClassView: View {
                 .sheet(isPresented: $showingRoster) {
                     ClassRosterManagementView(classSession: cls)
                         .environmentObject(app)
+                }
+                .sheet(isPresented: $showingNFCWrite) {
+                    NFCWriteSheetView(
+                        classID: cls.id,
+                        className: cls.subject,
+                        onWriteSuccess: {
+                            writeSuccess = true
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                                writeSuccess = false
+                            }
+                        },
+                        onWriteError: { error in
+                            writeError = error
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+                                writeError = nil
+                            }
+                        }
+                    )
+                }
+                .overlay {
+                    if writeSuccess {
+                        VStack {
+                            Spacer()
+                            HStack {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundColor(.green)
+                                Text("NFC tag written successfully!")
+                                    .foregroundColor(.white)
+                            }
+                            .padding()
+                            .background(Color.black.opacity(0.8))
+                            .cornerRadius(12)
+                            .padding(.bottom, 50)
+                        }
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                        .zIndex(10)
+                    }
+
+                    if let error = writeError {
+                        VStack {
+                            Spacer()
+                            HStack {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .foregroundColor(.red)
+                                Text("Write failed: \(error)")
+                                    .foregroundColor(.white)
+                            }
+                            .padding()
+                            .background(Color.black.opacity(0.8))
+                            .cornerRadius(12)
+                            .padding(.bottom, 50)
+                        }
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                        .zIndex(10)
+                    }
                 }
 
             } else {

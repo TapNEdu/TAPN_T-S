@@ -181,11 +181,15 @@ struct StudentInsert: Encodable {
 struct RosterEntryInsert: Encodable {
     let classSessionId: UUID
     let studentUserId: UUID
+    let studentName: String
+    let studentEmail: String
     let addedByUserId: UUID?
 
     enum CodingKeys: String, CodingKey {
         case classSessionId = "class_session_id"
         case studentUserId = "student_user_id"
+        case studentName = "student_name"
+        case studentEmail = "student_email"
         case addedByUserId = "added_by_user_id"
     }
 }
