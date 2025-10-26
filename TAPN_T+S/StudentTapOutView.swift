@@ -13,7 +13,7 @@ struct StudentTapOutView: View {
 
                 Text("tap to tap-out")
                     .font(.largeTitle.weight(.bold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(AppTheme.text)
 
                 Image(systemName: "face.smiling.inverse")
                     .font(.system(size: 96, weight: .thin))
@@ -30,7 +30,7 @@ struct StudentTapOutView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
                         .background(Color.white.opacity(0.12))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(AppTheme.text)
                         .clipShape(RoundedRectangle(cornerRadius: 16))
                 }
 
@@ -41,7 +41,7 @@ struct StudentTapOutView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
                         .background(AppTheme.field)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(AppTheme.text)
                         .clipShape(RoundedRectangle(cornerRadius: 16))
                 }
 

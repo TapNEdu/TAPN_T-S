@@ -22,7 +22,7 @@ struct SetTimeView: View {
                         }
 
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("enter:").foregroundStyle(.white).font(.headline)
+                            Text("enter:").foregroundStyle(AppTheme.text).font(.headline)
                             HStack {
                                 TextField("minutes", text: $custom)
                                     .keyboardType(.numberPad)
@@ -43,7 +43,7 @@ struct SetTimeView: View {
                 )
                 .navigationTitle("set time")
                 .toolbar {
-                    ToolbarItem(placement: .cancellationAction) { Button("back") { dismiss() }.foregroundStyle(.white) }
+                    ToolbarItem(placement: .cancellationAction) { Button("back") { dismiss() }.foregroundStyle(AppTheme.text) }
                 }
         }
     }
@@ -54,6 +54,6 @@ struct SetTimeView: View {
             .padding(.horizontal, 14).padding(.vertical, 12)
             .background(AppTheme.field)
             .clipShape(RoundedRectangle(cornerRadius: 12))
-            .foregroundStyle(.white)
+            .foregroundStyle(AppTheme.text)
     }
 }

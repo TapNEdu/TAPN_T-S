@@ -14,9 +14,9 @@ struct SetAllowedAppsView: View {
                     ForEach(AllowedApp.allCases) { a in
                         Toggle(isOn: binding(for: a)) {
                             Text(a.title)
-                                .foregroundStyle(.white)
+                                .foregroundStyle(AppTheme.text)
                         }
-                        .tint(.green)
+                        .tint(AppTheme.sageGreen)
                         .listRowBackground(AppTheme.card)
                         .listSectionSeparatorTint(.clear)
 

@@ -68,6 +68,7 @@ final class LegacyClass {
     var startTime: String = "08:00"
     private(set) var students: [LegacyStudent] = []
     private(set) var currentAttendance: [String: LegacyAttendanceStatus] = [:]
+    
 
     init(teacher: LegacyTeacher, ID: String, startTime: String = "08:00") {
         self.teacher = teacher
