@@ -6,14 +6,21 @@ import SwiftUI
 @MainActor
 final class AppBlockingManager: ObservableObject {
     static let shared = AppBlockingManager()
-    
+
     private let store = ManagedSettingsStore()
     @Published var isAuthorized = false
     @Published var isBlocking = false
-    
+
+    // Persistence keys
+    private let blockingEndTimeKey = "blockingEndTime"
+    private let blockingClassIDKey = "blockingClassID"
+
     private init() {
         // Check if we already have authorization
         checkAuthorizationStatus()
+
+        // Check if there's an active blocking session
+        checkAndRestoreBlockingSession()
     }
     
     // MARK: - Authorization
@@ -146,7 +153,100 @@ final class AppBlockingManager: ObservableObject {
     func disableBlocking() {
         removeAllRestrictions()
     }
-    
+
+    // MARK: - Class Session Blocking
+
+    func startBlocking(for classSession: ClassSession) {
+        guard isAuthorized else {
+            print("❌ AppBlocking: Cannot start blocking - not authorized")
+            return
+        }
+
+        guard let startTime = classSession.startTime else {
+            print("❌ AppBlocking: Cannot start blocking - class not started")
+            return
+        }
+
+        let endTime = startTime.addingTimeInterval(Double(classSession.settings.durationMinutes) * 60)
+
+        print("🔒 AppBlocking: Starting blocking for class: \(classSession.subject)")
+        print("   Duration: \(classSession.settings.durationMinutes) minutes")
+        print("   End time: \(endTime)")
+        print("   Blocked categories: \(classSession.settings.categories)")
+        print("   Allowed apps: \(classSession.settings.allowedApps)")
+
+        // For now, use aggressive blocking (block all apps)
+        // In the future, we can customize based on settings.categories and settings.allowedApps
+        store.clearAllSettings()
+        store.shield.applicationCategories = .all(except: Set())
+
+        // Save blocking state for persistence
+        UserDefaults.standard.set(endTime, forKey: blockingEndTimeKey)
+        UserDefaults.standard.set(classSession.id.uuidString, forKey: blockingClassIDKey)
+
+        isBlocking = true
+        print("✅ AppBlocking: Blocking started until \(endTime)")
+
+        // Schedule auto-removal when class ends
+        scheduleBlockingRemoval(at: endTime, for: classSession.id)
+    }
+
+    func stopBlocking() {
+        print("🔒 AppBlocking: Stopping blocking...")
+
+        removeAllRestrictions()
+
+        // Clear persistence
+        UserDefaults.standard.removeObject(forKey: blockingEndTimeKey)
+        UserDefaults.standard.removeObject(forKey: blockingClassIDKey)
+
+        print("✅ AppBlocking: Blocking stopped")
+    }
+
+    private func checkAndRestoreBlockingSession() {
+        guard let endTime = UserDefaults.standard.object(forKey: blockingEndTimeKey) as? Date,
+              let classIDString = UserDefaults.standard.string(forKey: blockingClassIDKey),
+              let classID = UUID(uuidString: classIDString) else {
+            print("📱 AppBlocking: No active blocking session to restore")
+            return
+        }
+
+        // Check if blocking should still be active
+        if endTime > Date() {
+            print("🔄 AppBlocking: Restoring active blocking session")
+            print("   Class ID: \(classID)")
+            print("   End time: \(endTime)")
+
+            // Re-apply blocking
+            store.shield.applicationCategories = .all(except: Set())
+            isBlocking = true
+
+            // Re-schedule removal
+            scheduleBlockingRemoval(at: endTime, for: classID)
+        } else {
+            print("⏰ AppBlocking: Previous blocking session expired, cleaning up")
+            stopBlocking()
+        }
+    }
+
+    private func scheduleBlockingRemoval(at endTime: Date, for classID: UUID) {
+        let timeUntilEnd = endTime.timeIntervalSinceNow
+
+        guard timeUntilEnd > 0 else {
+            print("⏰ AppBlocking: End time already passed, stopping blocking immediately")
+            stopBlocking()
+            return
+        }
+
+        print("⏰ AppBlocking: Scheduled auto-removal in \(Int(timeUntilEnd)) seconds")
+
+        // Use DispatchQueue to schedule removal
+        DispatchQueue.main.asyncAfter(deadline: .now() + timeUntilEnd) { [weak self] in
+            print("⏰ AppBlocking: Auto-removing blocks - class ended")
+            self?.stopBlocking()
+        }
+    }
+
     // MARK: - Helper Methods
     
     func getBlockedAppsCount() -> Int {

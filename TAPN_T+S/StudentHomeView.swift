@@ -4,10 +4,10 @@ struct StudentHomeView: View {
     @EnvironmentObject var app: AppState
 
     @State private var showSuccess = false
+    @State private var navigateToInClass = false
     @State private var showRoleSwitcher = false
     @State private var errorMessage: String?
     @State private var showError = false
-    @State private var successAction: String = "Tap-in"
 
     var body: some View {
         NavigationStack {
@@ -26,10 +26,7 @@ struct StudentHomeView: View {
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 12) {
                                     ForEach(app.classes) { cls in
-                                        ClassCard(
-                                            classSession: cls,
-                                            isSelected: app.activeClassID == cls.id
-                                        )
+                                        ClassCard(classSession: cls)
                                     }
                                 }
                                 .padding(.horizontal)
@@ -39,38 +36,20 @@ struct StudentHomeView: View {
                     }
 
                     Spacer()
+                    Text("tap to tap-in")
+                        .font(.largeTitle.weight(.bold))
+                        .foregroundStyle(.white)
 
-                    if isTappedIn {
-                        Text("tap to tap-out")
-                            .font(.largeTitle.weight(.bold))
-                            .foregroundStyle(.white)
+                    Image(systemName: "face.smiling")
+                        .font(.system(size: 96, weight: .thin))
+                        .padding(28)
+                        .background(AppTheme.card)
+                        .clipShape(RoundedRectangle(cornerRadius: 28))
+                        .onTapGesture { beginScan() }
 
-                        Image(systemName: "hand.wave.fill")
-                            .font(.system(size: 96, weight: .thin))
-                            .padding(28)
-                            .background(AppTheme.card)
-                            .clipShape(RoundedRectangle(cornerRadius: 28))
-                            .onTapGesture { tapOut() }
-
-                        Button {
-                            tapOut()
-                        } label: { fullWidthButton("tap out") }
-                    } else {
-                        Text("tap to tap-in")
-                            .font(.largeTitle.weight(.bold))
-                            .foregroundStyle(.white)
-
-                        Image(systemName: "face.smiling")
-                            .font(.system(size: 96, weight: .thin))
-                            .padding(28)
-                            .background(AppTheme.card)
-                            .clipShape(RoundedRectangle(cornerRadius: 28))
-                            .onTapGesture { beginScan() }
-
-                        Button {
-                            beginScan()
-                        } label: { fullWidthButton("scan tag") }
-                    }
+                    Button {
+                        beginScan()
+                    } label: { fullWidthButton("scan tag") }
 
                     Menu {
                         Button(action: { showRoleSwitcher = true }) {
@@ -84,6 +63,14 @@ struct StudentHomeView: View {
                     }
 
                     Spacer()
+
+                    NavigationLink(isActive: $navigateToInClass) {
+                        StudentInClassView()
+                            .environmentObject(app)
+                    } label: {
+                        EmptyView()
+                    }
+                    .hidden()
                 }
                 .padding()
                 .navigationTitle("student")
@@ -94,7 +81,7 @@ struct StudentHomeView: View {
                 }
 
                 if showSuccess {
-                    SuccessOverlay(title: "\(successAction) successful!")
+                    SuccessOverlay(title: "Tap-in successful!")
                         .transition(.scale.combined(with: .opacity))
                         .zIndex(1)
                 }
@@ -105,7 +92,7 @@ struct StudentHomeView: View {
                             .font(.system(size: 48))
                             .foregroundColor(.red)
 
-                        Text("\(successAction) Failed")
+                        Text("Tap-in Failed")
                             .font(.headline)
                             .foregroundColor(.white)
 
@@ -121,6 +108,7 @@ struct StudentHomeView: View {
                             }
                         }
                         .buttonStyle(.borderedProminent)
+                        
                     }
                     .padding(32)
                     .background(Color.black.opacity(0.9))
@@ -143,65 +131,43 @@ struct StudentHomeView: View {
         }
     }
 
-    private var isTappedIn: Bool {
-        guard let activeClass = app.activeClass,
-              let userId = app.currentUser?.id else {
-            return false
-        }
-
-        // Check if student is in the students list and is currently present
-        return activeClass.students.contains { student in
-            student.userId == userId && student.status == .present
-        }
-    }
-
-    private func tapOut() {
-        successAction = "Tap-out"
-        app.studentTapOut()
-
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-            showSuccess = true
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            withAnimation(.easeOut(duration: 0.25)) {
-                showSuccess = false
-            }
-        }
-    }
-
     private func beginScan() {
-        successAction = "Tap-in"
-
-        NFCManager.shared.onTag = { [self] classIDString in
-            print("NFC tag detected for student:", app.userProfile?.name ?? "Unknown")
+        NFCManager.shared.onTag = { classIDString in
+            print("NFC tag detected for student:", self.app.userProfile?.name ?? "Unknown")
             print("Class ID from tag:", classIDString)
 
             Task { @MainActor in
                 do {
                     // Parse the UUID from the NFC tag
                     guard let classID = UUID(uuidString: classIDString) else {
-                        errorMessage = "Invalid class ID on NFC tag"
+                        self.errorMessage = "Invalid class ID on NFC tag"
                         withAnimation {
-                            showError = true
+                            self.showError = true
                         }
                         return
                     }
 
                     // Tap in using the class ID from the tag
-                    try await app.studentTapIn(classID: classID)
+                    try await self.app.studentTapIn(classID: classID)
+
+                    // Start app blocking after successful tap-in
+                    if let tappedInClass = self.app.classes.first(where: { $0.id == classID }) {
+                        AppBlockingManager.shared.startBlocking(for: tappedInClass)
+                    }
 
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                        showSuccess = true
+                        self.showSuccess = true
                     }
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                         withAnimation(.easeOut(duration: 0.25)) {
-                            showSuccess = false
+                            self.showSuccess = false
                         }
+                        self.navigateToInClass = true
                     }
                 } catch {
-                    errorMessage = error.localizedDescription
+                    self.errorMessage = error.localizedDescription
                     withAnimation {
-                        showError = true
+                        self.showError = true
                     }
                 }
             }
@@ -233,7 +199,6 @@ struct StudentHomeView: View {
 
 struct ClassCard: View {
     let classSession: ClassSession
-    var isSelected: Bool = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -250,24 +215,15 @@ struct ClassCard: View {
                     Circle()
                         .fill(.green)
                         .frame(width: 8, height: 8)
-                    Text(isSelected ? "Tapped In" : "Active")
+                    Text("Active")
                         .font(.caption2)
                         .foregroundStyle(.green)
                 }
-            } else {
-                Text("Not Started")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
             }
         }
         .padding()
         .frame(width: 160)
-        .background(isSelected ? Color.green.opacity(0.3) : AppTheme.card)
+        .background(AppTheme.card)
         .cornerRadius(12)
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(isSelected ? Color.green : Color.clear, lineWidth: 2)
-        )
-        .opacity(classSession.isActive ? 1.0 : 0.5)
     }
 }
