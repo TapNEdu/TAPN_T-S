@@ -8,6 +8,7 @@ struct StudentHomeView: View {
     @State private var showRoleSwitcher = false
     @State private var errorMessage: String?
     @State private var showError = false
+    @State private var successAction: String = "Tap-in"
 
     var body: some View {
         NavigationStack {
@@ -81,7 +82,7 @@ struct StudentHomeView: View {
                 }
 
                 if showSuccess {
-                    SuccessOverlay(title: "Tap-in successful!")
+                    SuccessOverlay(title: "\(successAction) successful!")
                         .transition(.scale.combined(with: .opacity))
                         .zIndex(1)
                 }
@@ -92,7 +93,7 @@ struct StudentHomeView: View {
                             .font(.system(size: 48))
                             .foregroundColor(.red)
 
-                        Text("Tap-in Failed")
+                        Text("\(successAction) Failed")
                             .font(.headline)
                             .foregroundColor(.white)
 
@@ -147,22 +148,49 @@ struct StudentHomeView: View {
                         return
                     }
 
-                    // Tap in using the class ID from the tag
-                    try await self.app.studentTapIn(classID: classID)
+                    // Check if student is already tapped in to this class
+                    let classSession = self.app.classes.first(where: { $0.id == classID })
+                    let isAlreadyTappedIn = classSession?.students.contains { student in
+                        student.userId == self.app.currentUser?.id && student.status == .present
+                    } ?? false
 
-                    // Start app blocking after successful tap-in
-                    if let tappedInClass = self.app.classes.first(where: { $0.id == classID }) {
-                        AppBlockingManager.shared.startBlocking(for: tappedInClass)
-                    }
+                    if isAlreadyTappedIn {
+                        // TAP OUT: Student is already tapped in, so tap them out
+                        print("Student already tapped in - tapping out")
+                        self.successAction = "Tap-out"
+                        self.app.studentTapOut()
 
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                        self.showSuccess = true
-                    }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                        withAnimation(.easeOut(duration: 0.25)) {
-                            self.showSuccess = false
+                        // Remove app blocking
+                        AppBlockingManager.shared.stopBlocking()
+
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                            self.showSuccess = true
                         }
-                        self.navigateToInClass = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                            withAnimation(.easeOut(duration: 0.25)) {
+                                self.showSuccess = false
+                            }
+                        }
+                    } else {
+                        // TAP IN: Student not tapped in yet, so tap them in
+                        print("Student not tapped in - tapping in")
+                        self.successAction = "Tap-in"
+                        try await self.app.studentTapIn(classID: classID)
+
+                        // Start app blocking after successful tap-in
+                        if let tappedInClass = self.app.classes.first(where: { $0.id == classID }) {
+                            AppBlockingManager.shared.startBlocking(for: tappedInClass)
+                        }
+
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                            self.showSuccess = true
+                        }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                            withAnimation(.easeOut(duration: 0.25)) {
+                                self.showSuccess = false
+                            }
+                            self.navigateToInClass = true
+                        }
                     }
                 } catch {
                     self.errorMessage = error.localizedDescription

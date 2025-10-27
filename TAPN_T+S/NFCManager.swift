@@ -46,9 +46,22 @@ final class NFCManager: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate
         print("🎭 Simulating tag scan...")
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
             print("✅ Simulated tag detected")
-            // Simulate a realistic class ID for testing
-            let simulatedClassID = "MATH_1000_1100" // Math 10:00-11:00
-            print("📝 Simulated class ID:", simulatedClassID)
+
+            // Try to get the first active class from AppState for simulation
+            // Otherwise use a placeholder UUID
+            let simulatedClassID: String
+            if let firstClass = AppState.shared.classes.first(where: { $0.isActive }) {
+                simulatedClassID = firstClass.id.uuidString
+                print("📝 Simulated class ID from active class: \(simulatedClassID)")
+            } else if let firstClass = AppState.shared.classes.first {
+                simulatedClassID = firstClass.id.uuidString
+                print("📝 Simulated class ID from first class: \(simulatedClassID)")
+            } else {
+                // Fallback to a valid UUID format
+                simulatedClassID = "00000000-0000-0000-0000-000000000000"
+                print("📝 Simulated class ID (placeholder): \(simulatedClassID)")
+            }
+
             self.onTag?(simulatedClassID)
         }
     }
