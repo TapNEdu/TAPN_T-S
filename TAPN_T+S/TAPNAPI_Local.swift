@@ -89,6 +89,22 @@ final class TAPNAPI_Local: TAPNAPI {
         return toSession(cls, id: id)
     }
 
+    func deleteClass(classID: UUID) async throws {
+        guard classMap[classID] != nil else { throw APIError.notFound }
+
+        // Remove from all tracking dictionaries
+        classMap.removeValue(forKey: classID)
+        durationByID.removeValue(forKey: classID)
+        categoriesByID.removeValue(forKey: classID)
+        allowedAppsByID.removeValue(forKey: classID)
+        startTimeByID.removeValue(forKey: classID)
+        endTimeByID.removeValue(forKey: classID)
+
+        // Note: LegacySchool and LegacyTeacher classes arrays are private(set)
+        // and cannot be modified from outside. Since we're tracking classes
+        // via classMap, we don't need to modify those arrays.
+    }
+
     func getClass(id: UUID) async throws -> ClassSession {
         guard let cls = classMap[id] else { throw APIError.notFound }
         return toSession(cls, id: id)

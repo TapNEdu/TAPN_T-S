@@ -269,6 +269,29 @@ final class AppState: ObservableObject {
         }
     }
 
+    func deleteClass(_ classID: UUID) {
+        // Safety check: don't delete active class
+        guard activeClassID != classID else {
+            print("❌ Cannot delete active class. End the class first.")
+            return
+        }
+
+        Task {
+            do {
+                try await api.deleteClass(classID: classID)
+                print("✅ Class deleted successfully: \(classID)")
+
+                // Remove from local state
+                classes.removeAll { $0.id == classID }
+
+                // Also remove from legacyClasses
+                legacyClasses.removeAll { $0.ID == classID.uuidString }
+            } catch {
+                print("❌ Failed to delete class: \(error.localizedDescription)")
+            }
+        }
+    }
+
     func setCategories(for classID: UUID, _ categories: Set<AppCategory>) {
         Task {
             if let updated = try? await api.setCategories(classID: classID, categories: categories) {
@@ -295,29 +318,71 @@ final class AppState: ObservableObject {
 
     func startClass(_ classID: UUID) {
         Task {
-            if let current = activeClassID, current != classID {
-                _ = try? await api.endClass(classID: current)
-                if let updatedPrev = try? await api.getClass(id: current) { replace(updatedPrev) }
-            }
-            if let updated = try? await api.startClass(classID: classID) {
+            do {
+                // End current class if there is one
+                if let current = activeClassID, current != classID {
+                    do {
+                        let endedClass = try await api.endClass(classID: current)
+                        replace(endedClass)
+                        print("✅ Previous class ended: \(current)")
+                    } catch {
+                        print("⚠️ Failed to end previous class: \(error.localizedDescription)")
+                    }
+                }
+
+                // Start the new class
+                let updated = try await api.startClass(classID: classID)
+                print("✅ Class started successfully: \(classID)")
                 replace(updated)
                 activeClassID = classID
                 startTicker()
                 startPollerIfNeeded()
+            } catch {
+                print("❌ Failed to start class: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    func endClass(_ classID: UUID) {
+        print("🔴 endClass() CALLED for class: \(classID)")
+        Task {
+            do {
+                let updated = try await api.endClass(classID: classID)
+                print("✅ Class ended successfully: \(classID)")
+                print("🔴 Updated class isActive: \(updated.isActive)")
+                print("🔴 Updated class endTime: \(String(describing: updated.endTime))")
+                replace(updated)
+
+                // If this was the active class, clear it
+                if activeClassID == classID {
+                    print("🔴 This was the active class, clearing activeClassID")
+                    activeClassID = nil
+                    stopTicker()
+                    stopPoller()
+                }
+                print("🔴 State cleanup complete")
+            } catch {
+                print("❌ Failed to end class: \(error)")
+                print("❌ Error localized: \(error.localizedDescription)")
+                // Force refresh the class to get latest state
+                if let fresh = try? await api.getClass(id: classID) {
+                    print("🔄 Refreshed class, isActive: \(fresh.isActive)")
+                    replace(fresh)
+                }
             }
         }
     }
 
     func endActiveClass() {
-        guard let id = activeClassID else { return }
-        Task {
-            if let updated = try? await api.endClass(classID: id) {
-                replace(updated)
-            }
-            activeClassID = nil
-            stopTicker()
-            stopPoller()
+        print("🔴 endActiveClass() CALLED")
+        print("🔴 activeClassID: \(String(describing: activeClassID))")
+
+        guard let id = activeClassID else {
+            print("❌ endActiveClass: activeClassID is nil, returning early")
+            return
         }
+
+        endClass(id)
     }
 
     private func startTicker() {

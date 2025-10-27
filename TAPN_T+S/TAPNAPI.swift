@@ -3,6 +3,7 @@ import Foundation
 protocol TAPNAPI {
     func bootstrap() async throws -> [ClassSession]
     func createClass(subject: String, timeLabel: String, teacherId: UUID) async throws -> ClassSession
+    func deleteClass(classID: UUID) async throws
     func getClass(id: UUID) async throws -> ClassSession
 
     func setDuration(classID: UUID, minutes: Int) async throws -> ClassSession

@@ -4,6 +4,7 @@ struct TeacherHomeView: View {
     @EnvironmentObject var app: AppState
     @State private var showAdd = false
     @State private var showRoleSwitcher = false
+    @State private var classToDelete: ClassSession?
 
     var body: some View {
         NavigationStack {
@@ -37,6 +38,18 @@ struct TeacherHomeView: View {
                                 .padding(.vertical, 6)
                             }
                             .listRowBackground(AppTheme.card)
+                        }
+                        .onDelete { indexSet in
+                            guard let index = indexSet.first else { return }
+                            let cls = app.classes[index]
+
+                            // Prevent deletion of active class
+                            if cls.isActive {
+                                print("Cannot delete active class")
+                                return
+                            }
+
+                            classToDelete = cls
                         }
                     }
                     .scrollContentBackground(.hidden)
@@ -91,6 +104,24 @@ struct TeacherHomeView: View {
                 Button("Cancel", role: .cancel) {}
             } message: {
                 Text("Are you sure you want to switch to student mode?")
+            }
+            .confirmationDialog(
+                "Delete Class",
+                isPresented: Binding(
+                    get: { classToDelete != nil },
+                    set: { if !$0 { classToDelete = nil } }
+                ),
+                presenting: classToDelete
+            ) { cls in
+                Button("Delete \(cls.subject)", role: .destructive) {
+                    app.deleteClass(cls.id)
+                    classToDelete = nil
+                }
+                Button("Cancel", role: .cancel) {
+                    classToDelete = nil
+                }
+            } message: { cls in
+                Text("Are you sure you want to delete \(cls.subject)? This will remove all attendance records and cannot be undone.")
             }
         }
     }

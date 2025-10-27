@@ -108,7 +108,7 @@ struct TeacherClassView: View {
                         Spacer()
                         if cls.isActive {
                             Button(role: .destructive) {
-                                app.endActiveClass()
+                                app.endClass(classID)
                                 remainingSeconds = nil
                             } label: { pill("end") }
                         } else {

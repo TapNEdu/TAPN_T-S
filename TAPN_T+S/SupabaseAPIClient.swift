@@ -100,6 +100,15 @@ struct SupabaseAPIClient: TAPNAPI {
         return result.toClassSession()
     }
 
+    // MARK: - Delete Class
+    func deleteClass(classID: UUID) async throws {
+        try await supabase
+            .from("class_sessions")
+            .delete()
+            .eq("id", value: classID.uuidString)
+            .execute()
+    }
+
     // MARK: - Get Class
     func getClass(id: UUID) async throws -> ClassSession {
         let result: ClassSessionDTO = try await supabase
