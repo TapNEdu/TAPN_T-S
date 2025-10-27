@@ -28,12 +28,7 @@ struct StudentHomeView: View {
                                     ForEach(app.classes) { cls in
                                         ClassCard(
                                             classSession: cls,
-                                            isSelected: app.activeClassID == cls.id,
-                                            onTap: {
-                                                if cls.isActive {
-                                                    app.activeClassID = cls.id
-                                                }
-                                            }
+                                            isSelected: app.activeClassID == cls.id
                                         )
                                     }
                                 }
@@ -75,8 +70,6 @@ struct StudentHomeView: View {
                         Button {
                             beginScan()
                         } label: { fullWidthButton("scan tag") }
-                        .disabled(app.activeClass == nil)
-                        .opacity(app.activeClass == nil ? 0.5 : 1)
                     }
 
                     Menu {
@@ -178,14 +171,24 @@ struct StudentHomeView: View {
 
     private func beginScan() {
         successAction = "Tap-in"
-        guard app.activeClass != nil else { return }
 
-        NFCManager.shared.onTag = { [self] _ in
+        NFCManager.shared.onTag = { [self] classIDString in
             print("NFC tag detected for student:", app.userProfile?.name ?? "Unknown")
+            print("Class ID from tag:", classIDString)
 
             Task { @MainActor in
                 do {
-                    try await app.studentTapIn()
+                    // Parse the UUID from the NFC tag
+                    guard let classID = UUID(uuidString: classIDString) else {
+                        errorMessage = "Invalid class ID on NFC tag"
+                        withAnimation {
+                            showError = true
+                        }
+                        return
+                    }
+
+                    // Tap in using the class ID from the tag
+                    try await app.studentTapIn(classID: classID)
 
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
                         showSuccess = true
@@ -231,7 +234,6 @@ struct StudentHomeView: View {
 struct ClassCard: View {
     let classSession: ClassSession
     var isSelected: Bool = false
-    var onTap: (() -> Void)? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -248,7 +250,7 @@ struct ClassCard: View {
                     Circle()
                         .fill(.green)
                         .frame(width: 8, height: 8)
-                    Text(isSelected ? "Selected" : "Active")
+                    Text(isSelected ? "Tapped In" : "Active")
                         .font(.caption2)
                         .foregroundStyle(.green)
                 }
@@ -266,9 +268,6 @@ struct ClassCard: View {
             RoundedRectangle(cornerRadius: 12)
                 .stroke(isSelected ? Color.green : Color.clear, lineWidth: 2)
         )
-        .onTapGesture {
-            onTap?()
-        }
         .opacity(classSession.isActive ? 1.0 : 0.5)
     }
 }

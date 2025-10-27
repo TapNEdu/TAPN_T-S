@@ -356,16 +356,18 @@ final class AppState: ObservableObject {
         poller = nil
     }
 
-    func studentTapIn() async throws {
-        guard let id = activeClassID,
-              let userId = currentUser?.id,
+    func studentTapIn(classID: UUID) async throws {
+        guard let userId = currentUser?.id,
               let studentName = userProfile?.name else {
             throw AppStateError.notAuthenticated
         }
 
         guard let apiClient = api as? SupabaseAPIClient else { return }
-        let updated = try await apiClient.studentTapIn(classID: id, userId: userId, studentName: studentName)
+        let updated = try await apiClient.studentTapIn(classID: classID, userId: userId, studentName: studentName)
         replace(updated)
+
+        // Set this as the active class after successful tap-in
+        activeClassID = classID
     }
     func studentTapOut() {
         guard let id = activeClassID,
