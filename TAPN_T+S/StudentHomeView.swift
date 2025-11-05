@@ -21,7 +21,7 @@ struct StudentHomeView: View {
                         VStack(alignment: .leading, spacing: 12) {
                             Text("Your Classes")
                                 .font(.headline)
-                                .foregroundStyle(.white)
+                                .foregroundStyle(AppTheme.sageGreen)
                                 .padding(.horizontal)
 
                             ScrollView(.horizontal, showsIndicators: false) {
@@ -37,20 +37,16 @@ struct StudentHomeView: View {
                     }
 
                     Spacer()
-                    Text("tap to tap-in")
+                    Text("Tap-In")
                         .font(.largeTitle.weight(.bold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(AppTheme.sageGreen)
 
-                    Image(systemName: "face.smiling")
+                    Image(systemName: "hand.tap")
                         .font(.system(size: 96, weight: .thin))
                         .padding(28)
                         .background(AppTheme.card)
                         .clipShape(RoundedRectangle(cornerRadius: 28))
                         .onTapGesture { beginScan() }
-
-                    Button {
-                        beginScan()
-                    } label: { fullWidthButton("scan tag") }
 
                     Menu {
                         Button(action: { showRoleSwitcher = true }) {
@@ -74,7 +70,12 @@ struct StudentHomeView: View {
                     .hidden()
                 }
                 .padding()
-                .navigationTitle("student")
+                .toolbar {
+                    ToolbarItem(placement: .principal) {
+                        Text("Student Dashboard")
+                            .foregroundStyle(AppTheme.sageGreen)
+                    }
+                }
                 .onAppear {
                     Task {
                         await app.loadStudentClasses()
@@ -232,7 +233,7 @@ struct ClassCard: View {
         VStack(alignment: .leading, spacing: 8) {
             Text(classSession.subject)
                 .font(.headline)
-                .foregroundStyle(.white)
+                .foregroundStyle(AppTheme.subtext)
 
             Text(classSession.timeLabel)
                 .font(.caption)

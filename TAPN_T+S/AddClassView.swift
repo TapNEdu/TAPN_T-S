@@ -12,17 +12,16 @@ struct AddClassView: View {
             VStack(spacing: 20) {
                 TextField("Class name (e.g., English)", text: $classTitle)
                     .textFieldStyle(.roundedBorder)
-                    .foregroundColor(.white)
+                    .foregroundColor(AppTheme.sageGreen)
 
                 TextField("Time (e.g., 9am–10am)", text: $classTime)
                     .textFieldStyle(.roundedBorder)
-                    .foregroundColor(.white)
+                    .foregroundColor(AppTheme.sageGreen)
 
                 Spacer()
             }
             .padding()
             .background(AppTheme.bg)
-            .navigationTitle("Add Class")
             .toolbar(content: {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }

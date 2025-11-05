@@ -84,7 +84,7 @@ struct AddStudentToRosterView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
+                    Button("Done") {
                         dismiss()
                     }
                 }
@@ -129,10 +129,8 @@ struct AddStudentToRosterView: View {
                 )
                 successMessage = "\(user.name) added to roster"
 
-                // Clear search after 2 seconds
+                // Clear success message after 2 seconds, but keep the search results
                 try? await Task.sleep(nanoseconds: 2_000_000_000)
-                emailQuery = ""
-                searchResults = []
                 successMessage = nil
             } catch {
                 errorMessage = error.localizedDescription

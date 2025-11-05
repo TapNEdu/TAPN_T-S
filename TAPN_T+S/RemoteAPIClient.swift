@@ -39,6 +39,9 @@ struct RemoteAPIClient: TAPNAPI {
         struct Body: Encodable { let subject: String; let timeLabel: String; let teacherId: UUID }
         return try await request("/api/classes", method: "POST", body: Body(subject: subject, timeLabel: timeLabel, teacherId: teacherId))
     }
+    func deleteClass(classID: UUID) async throws {
+        let _: EmptyResponse = try await request("/api/classes/\(classID.uuidString)", method: "DELETE")
+    }
     func getClass(id: UUID) async throws -> ClassSession {
         try await request("/api/classes/\(id.uuidString)")
     }
@@ -81,3 +84,4 @@ private struct AnyEncodable: Encodable {
     func encode(to encoder: Encoder) throws { try _encode(encoder) }
 }
 private struct EmptyBody: Encodable {}
+private struct EmptyResponse: Decodable {}

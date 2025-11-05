@@ -16,35 +16,35 @@ struct NFCWriteSheetView: View {
                     Text("Write NFC Tag")
                         .font(.title2)
                         .fontWeight(.bold)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(AppTheme.sageGreen)
 
                     Text("Create a physical NFC tag for this class. Place the tag in your classroom so students can scan it to tap in.")
                         .font(.subheadline)
-                        .foregroundStyle(.white.opacity(0.8))
+                        .foregroundStyle(AppTheme.sageGreen.opacity(0.8))
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Class Information")
                         .font(.headline)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(AppTheme.sageGreen)
 
                     VStack(spacing: 8) {
                         HStack {
                             Text("Class:")
-                                .foregroundStyle(.white.opacity(0.7))
+                                .foregroundStyle(.gray.opacity(0.7))
                             Spacer()
                             Text(className)
-                                .foregroundStyle(.white)
+                                .foregroundStyle(.gray)
                                 .fontWeight(.medium)
                         }
 
                         HStack {
                             Text("Class ID:")
-                                .foregroundStyle(.white.opacity(0.7))
+                                .foregroundStyle(.gray.opacity(0.7))
                             Spacer()
                             Text(classID.uuidString.prefix(8) + "...")
-                                .foregroundStyle(.white.opacity(0.7))
+                                .foregroundStyle(.gray.opacity(0.7))
                                 .font(.caption)
                                 .monospaced()
                         }
@@ -86,7 +86,7 @@ struct NFCWriteSheetView: View {
                     Button(role: .cancel) {
                         dismiss()
                     } label: {
-                        Text("Cancel")
+                        Text("Done")
                             .font(AppTheme.buttonFont())
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 16)

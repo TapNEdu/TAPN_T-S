@@ -26,12 +26,12 @@ struct TeacherClassView: View {
                         HStack {
                             Text("Roster (\(cls.roster.count))")
                                 .font(.headline)
-                                .foregroundStyle(.white)
+                                .foregroundStyle(AppTheme.sageGreen)
                             Spacer()
                             Button(action: { showingRoster = true }) {
                                 Text("Manage")
                                     .font(.caption)
-                                    .foregroundStyle(.blue)
+                                    .foregroundStyle(AppTheme.sageGreen)
                             }
                         }
                         .padding(.horizontal)
@@ -73,7 +73,7 @@ struct TeacherClassView: View {
 
                     Text(remainingString(secondsToShow))
                         .font(.system(size: 72, weight: .bold, design: .rounded).monospacedDigit())
-                        .foregroundStyle(.white)
+                        .foregroundStyle(AppTheme.sageGreen)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
                         .accessibilityIdentifier("TeacherBigTimerLabel")
@@ -82,14 +82,13 @@ struct TeacherClassView: View {
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbarBackground(.visible, for: .navigationBar)
                 .toolbarBackground(AppTheme.bg, for: .navigationBar)
-                .toolbarColorScheme(.dark, for: .navigationBar)
 
 
                 .toolbar {
                     ToolbarItem(placement: .principal) {
                         Text(cls.subject)
                             .font(.largeTitle.bold())
-                            .foregroundStyle(.white)
+                            .foregroundStyle(AppTheme.sageGreen)
                             .accessibilityAddTraits(.isHeader)
                     }
 
@@ -98,7 +97,7 @@ struct TeacherClassView: View {
                             showingNFCWrite = true
                         } label: {
                             Image(systemName: "wave.3.right")
-                                .foregroundStyle(.white)
+                                .foregroundStyle(.blue)
                         }
                     }
 
@@ -114,7 +113,8 @@ struct TeacherClassView: View {
                         } else {
                             Button {
                                 app.startClass(classID)
-                                remainingSeconds = computeRemaining(for: cls)
+                                // Don't compute remaining seconds here - wait for the class to be updated
+                                // The timer will pick it up on the next tick
                             } label: { pill("start class") }
                         }
                     }

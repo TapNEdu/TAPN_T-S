@@ -17,23 +17,23 @@ struct SetTimeView: View {
                             ForEach(presets, id: \.self) { m in
                                 Button {
                                     app.setDuration(for: classID, minutes: m); dismiss()
-                                } label: { chip("\(m) min") }
+                                } label: { chip("\(m) min", color: AppTheme.sageGreen) }
                             }
                         }
 
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("enter:").foregroundStyle(AppTheme.text).font(.headline)
+                            Text("Custom Time").foregroundStyle(AppTheme.sageGreen).font(.headline)
                             HStack {
                                 TextField("minutes", text: $custom)
                                     .keyboardType(.numberPad)
-                                    .foregroundColor(.white)
+                                    .foregroundColor(AppTheme.sageGreen)
                                     .padding(.horizontal, 14)
                                     .padding(.vertical, 14)
                             }
                             .background(AppTheme.roundedField())
                             Button {
                                 if let m = Int(custom) { app.setDuration(for: classID, minutes: m); dismiss() }
-                            } label: { chip("apply custom") }
+                            } label: { chip("apply custom", color: AppTheme.sageGreen) }
                             .disabled(Int(custom) == nil)
                             .opacity(Int(custom) == nil ? 0.5 : 1)
                         }
@@ -43,17 +43,29 @@ struct SetTimeView: View {
                 )
                 .navigationTitle("set time")
                 .toolbar {
-                    ToolbarItem(placement: .cancellationAction) { Button("back") { dismiss() }.foregroundStyle(AppTheme.text) }
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancel") { dismiss() }.foregroundStyle(.blue)
+                    }
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Save") {
+                            if let m = Int(custom), m > 0 {
+                                app.setDuration(for: classID, minutes: m)
+                            }
+                            dismiss()
+                        }
+                        .foregroundStyle(.blue)
+                        .disabled(custom.isEmpty || Int(custom) == nil)
+                    }
                 }
         }
     }
 
-    private func chip(_ t: String) -> some View {
+    private func chip(_ t: String, color: Color) -> some View {
         Text(t)
             .font(AppTheme.buttonFont())
             .padding(.horizontal, 14).padding(.vertical, 12)
             .background(AppTheme.field)
             .clipShape(RoundedRectangle(cornerRadius: 12))
-            .foregroundStyle(AppTheme.text)
+            .foregroundStyle(color)
     }
 }

@@ -14,9 +14,9 @@ struct TeacherHomeView: View {
                     VStack(spacing: 12) {
                         Image(systemName: "rectangle.and.text.magnifyingglass")
                             .font(.system(size: 40))
-                            .foregroundStyle(.white.opacity(0.7))
-                        Text("my classes").foregroundStyle(.white).font(.title3.weight(.semibold))
-                        Text("add a class to get started").foregroundStyle(AppTheme.subtext)
+                            .foregroundStyle(AppTheme.sageGreen.opacity(0.7))
+                        Text("My classes").foregroundStyle(AppTheme.sageGreen).font(.title3.weight(.semibold))
+                        Text("dd a class to get started").foregroundStyle(AppTheme.subtext)
                     }
                 } else {
                     List {
@@ -26,7 +26,7 @@ struct TeacherHomeView: View {
                             } label: {
                                 HStack {
                                     VStack(alignment: .leading, spacing: 4) {
-                                        Text(cls.subject).foregroundStyle(.white).font(.headline)
+                                        Text(cls.subject).foregroundStyle(AppTheme.sageGreen).font(.headline)
                                         Text(cls.timeLabel).foregroundStyle(AppTheme.subtext).font(.subheadline)
                                     }
                                     Spacer()
@@ -72,7 +72,6 @@ struct TeacherHomeView: View {
                     }
                 }
             }
-            .navigationTitle("my classes")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Menu {
@@ -85,8 +84,13 @@ struct TeacherHomeView: View {
                     } label: {
                         Image(systemName: "person.circle.fill")
                             .font(.title3)
-                            .foregroundStyle(.white)
+                            .foregroundStyle(AppTheme.sageGreen)
                     }
+                }
+                
+                ToolbarItem(placement: .principal) {
+                    Text("Teacher Dashboard")
+                        .foregroundStyle(AppTheme.sageGreen)
                 }
             }
             .sheet(isPresented: $showAdd) {

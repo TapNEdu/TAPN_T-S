@@ -14,21 +14,17 @@ struct SignInView: View {
             VStack(spacing: 16) {
                 Text("TAPN")
                     .font(.system(size: 48, weight: .bold))
-                    .foregroundColor(.blue)
+                    .foregroundColor(AppTheme.sageGreen)
 
-                Text("Classroom Attendance Tracker")
+                Text("Enhancing Student Focus and Outcomes")
                     .font(.headline)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(AppTheme.subtext)
             }
 
             Spacer()
 
             // Sign in section
             VStack(spacing: 20) {
-                Text("Sign in to continue")
-                    .font(.title3)
-                    .fontWeight(.medium)
-
                 // Google Sign-In Button
                 GoogleSignInButton(action: signIn)
                     .frame(width: 280, height: 50)

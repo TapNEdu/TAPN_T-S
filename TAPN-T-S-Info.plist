@@ -2,10 +2,6 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>NFCReaderUsageDescription</key>
-	<string>This app uses NFC to record student attendance</string>
-	<key>GIDClientID</key>
-	<string>205189660137-f491ei0pjp9mm5h8gt82j7gea2u2cmv7.apps.googleusercontent.com</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -18,5 +14,7 @@
 			</array>
 		</dict>
 	</array>
+	<key>GIDClientID</key>
+	<string>205189660137-f491ei0pjp9mm5h8gt82j7gea2u2cmv7.apps.googleusercontent.com</string>
 </dict>
 </plist>

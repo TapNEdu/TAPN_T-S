@@ -22,6 +22,11 @@ actor MockDB {
         guard let c = classes.first(where: { $0.id == id }) else { throw APIError.notFound }
         return c
     }
+
+    func delete(_ id: UUID) throws {
+        guard let idx = classes.firstIndex(where: { $0.id == id }) else { throw APIError.notFound }
+        classes.remove(at: idx)
+    }
 }
 
 enum APIError: Error, LocalizedError {
@@ -57,6 +62,11 @@ struct MockAPIClient: TAPNAPI {
     func getClass(id: UUID) async throws -> ClassSession {
         try await Task.sleep(nanoseconds: latency)
         return try await db.get(id)
+    }
+
+    func deleteClass(classID: UUID) async throws {
+        try await Task.sleep(nanoseconds: latency)
+        try await db.delete(classID)
     }
 
     func setDuration(classID: UUID, minutes: Int) async throws -> ClassSession {

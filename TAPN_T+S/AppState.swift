@@ -26,6 +26,7 @@ final class AppState: ObservableObject {
     private var authStateListener: Task<Void, Never>?
 
     @Published var isAuthenticated: Bool = false
+    @Published var isLoadingProfile: Bool = false
     @Published var currentUser: User?
     @Published var userProfile: UserProfile?
 
@@ -70,9 +71,11 @@ final class AppState: ObservableObject {
         guard let userId = currentUser?.id else {
             userProfile = nil
             role = .none
+            isLoadingProfile = false
             return
         }
 
+        isLoadingProfile = true
         do {
             if let apiClient = api as? SupabaseAPIClient {
                 userProfile = try await apiClient.getUserProfile(userId: userId)
@@ -82,6 +85,7 @@ final class AppState: ObservableObject {
             userProfile = nil
             role = .none
         }
+        isLoadingProfile = false
     }
 
     private func setupAuthStateListener() {

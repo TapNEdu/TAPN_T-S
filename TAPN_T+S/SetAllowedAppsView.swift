@@ -14,7 +14,7 @@ struct SetAllowedAppsView: View {
                     ForEach(AllowedApp.allCases) { a in
                         Toggle(isOn: binding(for: a)) {
                             Text(a.title)
-                                .foregroundStyle(AppTheme.text)
+                                .foregroundStyle(AppTheme.sageGreen)
                         }
                         .tint(AppTheme.sageGreen)
                         .listRowBackground(AppTheme.card)
@@ -25,7 +25,7 @@ struct SetAllowedAppsView: View {
                     Text("ALLOW THESE APPS DURING CLASS")
                         .textCase(.uppercase)
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(AppTheme.subtext)
+                        .foregroundStyle(AppTheme.sageGreen)
                 }
             }
             .listStyle(.plain)
@@ -36,12 +36,14 @@ struct SetAllowedAppsView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
+                        .foregroundStyle(.blue)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
                         app.setAllowedApps(for: classID, allowed: selection)
                         dismiss()
                     }
+                    .foregroundStyle(.blue)
                 }
             }
             .navigationTitle("allow apps")

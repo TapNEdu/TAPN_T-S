@@ -34,6 +34,11 @@ private struct RootView: View {
             if !app.isAuthenticated {
                 // Not signed in - show sign-in view
                 SignInView()
+            } else if app.isLoadingProfile {
+                // Loading user profile - show loading indicator
+                ProgressView()
+                    .progressViewStyle(CircularProgressViewStyle())
+                    .scaleEffect(1.5)
             } else if app.userProfile?.role == nil || app.userProfile?.role == .none {
                 // Signed in but no role set - show role setup
                 RoleSetupView()
@@ -56,25 +61,20 @@ private struct RootView: View {
 private func configureNavigationBar() {
     let appearance = UINavigationBarAppearance()
     appearance.configureWithOpaqueBackground()
-    
+
     // Set background color to cream
     appearance.backgroundColor = UIColor(red: 250/255, green: 248/255, blue: 242/255, alpha: 1.0)
-    
+
     // Set title text color to dark sage
     appearance.titleTextAttributes = [
         .foregroundColor: UIColor(red: 45/255, green: 55/255, blue: 50/255, alpha: 1.0)
     ]
-    
-    // Set back button color to much darker for better visibility
-    appearance.backButtonAppearance.normal.titleTextAttributes = [
-        .foregroundColor: UIColor(red: 45/255, green: 55/255, blue: 50/255, alpha: 1.0)
-    ]
-    
+
     // Apply to navigation bar
     UINavigationBar.appearance().standardAppearance = appearance
     UINavigationBar.appearance().scrollEdgeAppearance = appearance
     UINavigationBar.appearance().compactAppearance = appearance
-    
-    // Set tint color for back buttons and other controls to much darker
-    UINavigationBar.appearance().tintColor = UIColor(red: 45/255, green: 55/255, blue: 50/255, alpha: 1.0)
+
+    // Set tint color for back buttons and other controls to Apple's blue
+    UINavigationBar.appearance().tintColor = UIColor.systemBlue
 }
