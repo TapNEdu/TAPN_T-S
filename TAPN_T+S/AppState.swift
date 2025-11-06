@@ -18,12 +18,13 @@ enum AppStateError: LocalizedError {
 @MainActor
 final class AppState: ObservableObject {
     static let shared = AppState(api: TAPNAPI_Local())
-    
+
     let api: TAPNAPI
 
     private var pollEvery: TimeInterval?
     private var poller: AnyCancellable?
     private var authStateListener: Task<Void, Never>?
+    private let realtimeManager = RealtimeManager.shared
 
     @Published var isAuthenticated: Bool = false
     @Published var isLoadingProfile: Bool = false
@@ -51,6 +52,7 @@ final class AppState: ObservableObject {
             await checkAuthSession()
             await bootstrap()
             setupAuthStateListener()
+            setupRealtimeCallbacks()
         }
     }
 
@@ -117,8 +119,61 @@ final class AppState: ObservableObject {
             isAuthenticated = false
             userProfile = nil
             role = .none
+
+            // Clean up all Realtime subscriptions on sign out
+            realtimeManager.cleanup()
         default:
             break
+        }
+    }
+
+    // MARK: - Realtime Setup
+
+    private func setupRealtimeCallbacks() {
+        print("📚 AppState: Setting up Realtime callbacks")
+
+        // Handle class session changes
+        realtimeManager.onClassChanged = { [weak self] classID in
+            guard let self else { return }
+            await self.refreshClass(classID)
+        }
+
+        // Handle student attendance changes
+        realtimeManager.onStudentChanged = { [weak self] classID in
+            guard let self else { return }
+            await self.refreshClass(classID)
+        }
+
+        // Handle roster changes
+        realtimeManager.onRosterChanged = { [weak self] classID in
+            guard let self else { return }
+            await self.refreshClass(classID)
+        }
+
+        // Handle user roster changes (for students)
+        realtimeManager.onUserRosterChanged = { [weak self] in
+            guard let self else { return }
+            print("📚 AppState: User roster changed, reloading student classes")
+            await self.loadStudentClasses()
+        }
+
+        print("✅ AppState: Realtime callbacks configured")
+    }
+
+    private func refreshClass(_ classID: UUID) async {
+        print("🔄 AppState: Refreshing class \(classID) due to Realtime update")
+
+        guard let apiClient = api as? SupabaseAPIClient else {
+            print("⚠️ AppState: Cannot refresh - API is not SupabaseAPIClient")
+            return
+        }
+
+        do {
+            let fresh = try await apiClient.getClass(id: classID)
+            replace(fresh)
+            print("✅ AppState: Class \(classID) refreshed successfully")
+        } catch {
+            print("❌ AppState: Failed to refresh class \(classID): \(error.localizedDescription)")
         }
     }
 
@@ -139,18 +194,18 @@ final class AppState: ObservableObject {
         }
     }
 
+    @available(*, deprecated, message: "Role switching has been removed. Users should have fixed roles.")
     func switchRole(to newRole: UserRole) async throws {
-        guard let userId = currentUser?.id else {
-            throw AppStateError.notAuthenticated
-        }
-
-        if let apiClient = api as? SupabaseAPIClient {
-            userProfile = try await apiClient.updateUserRole(userId: userId, role: newRole)
-            role = newRole
-        }
+        // This method is deprecated and should not be used
+        // Roles are now permanent and assigned at account creation
+        print("⚠️ switchRole() called but role switching is deprecated")
+        throw AppStateError.notAuthenticated
     }
 
     func signOut() async {
+        // Clean up Realtime subscriptions before signing out
+        realtimeManager.cleanup()
+
         do {
             try await GoogleAuthManager.shared.signOut()
         } catch {
@@ -160,6 +215,8 @@ final class AppState: ObservableObject {
 
     deinit {
         authStateListener?.cancel()
+        // Note: cleanup() is handled by auth state listener on sign out
+        // Cannot call main actor-isolated cleanup() from synchronous deinit
     }
 
     func bootstrap() async {
@@ -329,6 +386,9 @@ final class AppState: ObservableObject {
                         let endedClass = try await api.endClass(classID: current)
                         replace(endedClass)
                         print("✅ Previous class ended: \(current)")
+
+                        // Unsubscribe from previous class
+                        realtimeManager.unsubscribeFromClass(classID: current)
                     } catch {
                         print("⚠️ Failed to end previous class: \(error.localizedDescription)")
                     }
@@ -340,7 +400,9 @@ final class AppState: ObservableObject {
                 replace(updated)
                 activeClassID = classID
                 startTicker()
-                startPollerIfNeeded()
+
+                // Subscribe to Realtime updates for this class
+                realtimeManager.subscribeToClass(classID: classID)
             } catch {
                 print("❌ Failed to start class: \(error.localizedDescription)")
             }
@@ -362,7 +424,9 @@ final class AppState: ObservableObject {
                     print("🔴 This was the active class, clearing activeClassID")
                     activeClassID = nil
                     stopTicker()
-                    stopPoller()
+
+                    // Unsubscribe from Realtime updates
+                    realtimeManager.unsubscribeFromClass(classID: classID)
                 }
                 print("🔴 State cleanup complete")
             } catch {
@@ -405,22 +469,17 @@ final class AppState: ObservableObject {
         }
     }
 
+    // MARK: - Deprecated Polling Methods (kept for backward compatibility)
+
+    @available(*, deprecated, message: "Polling has been replaced by Realtime subscriptions")
     private func startPollerIfNeeded() {
-        stopPoller()
-        guard let seconds = pollEvery, seconds > 0, activeClassID != nil else { return }
-        poller = Timer.publish(every: seconds, on: .main, in: .common)
-            .autoconnect()
-            .sink { [weak self] _ in
-                guard let self, let id = self.activeClassID else { return }
-                Task {
-                    if let fresh = try? await self.api.getClass(id: id) {
-                        self.replace(fresh)
-                    }
-                }
-            }
+        // No-op: Realtime subscriptions have replaced polling
+        print("⚠️ startPollerIfNeeded() called but polling is deprecated - using Realtime instead")
     }
 
+    @available(*, deprecated, message: "Polling has been replaced by Realtime subscriptions")
     private func stopPoller() {
+        // No-op: Realtime subscriptions have replaced polling
         poller?.cancel()
         poller = nil
     }
@@ -437,7 +496,11 @@ final class AppState: ObservableObject {
 
         // Set this as the active class after successful tap-in
         activeClassID = classID
+
+        // Subscribe to Realtime updates for this class
+        realtimeManager.subscribeToClass(classID: classID)
     }
+
     func studentTapOut() {
         guard let id = activeClassID,
               let userId = currentUser?.id else { return }
@@ -445,6 +508,12 @@ final class AppState: ObservableObject {
             if let apiClient = api as? SupabaseAPIClient,
                let updated = try? await apiClient.studentTapOut(classID: id, userId: userId) {
                 replace(updated)
+
+                // Unsubscribe from Realtime updates after tapping out
+                realtimeManager.unsubscribeFromClass(classID: id)
+
+                // Clear active class
+                activeClassID = nil
             }
         }
     }

@@ -5,7 +5,6 @@ struct StudentHomeView: View {
 
     @State private var showSuccess = false
     @State private var navigateToInClass = false
-    @State private var showRoleSwitcher = false
     @State private var errorMessage: String?
     @State private var showError = false
     @State private var successAction: String = "Tap-in"
@@ -48,15 +47,8 @@ struct StudentHomeView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 28))
                         .onTapGesture { beginScan() }
 
-                    Menu {
-                        Button(action: { showRoleSwitcher = true }) {
-                            Label("Switch to Teacher", systemImage: "arrow.left.arrow.right")
-                        }
-                        Button(action: { Task { await app.signOut() } }) {
-                            Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
-                        }
-                    } label: {
-                        ghostButton("menu")
+                    Button(action: { Task { await app.signOut() } }) {
+                        ghostButton("sign out")
                     }
 
                     Spacer()
@@ -79,7 +71,16 @@ struct StudentHomeView: View {
                 .onAppear {
                     Task {
                         await app.loadStudentClasses()
+
+                        // Subscribe to roster changes for this student
+                        if let userId = app.currentUser?.id {
+                            RealtimeManager.shared.subscribeToUserRoster(userId: userId)
+                        }
                     }
+                }
+                .onDisappear {
+                    // Unsubscribe when view disappears
+                    RealtimeManager.shared.unsubscribeFromUserRoster()
                 }
 
                 if showSuccess {
@@ -119,16 +120,6 @@ struct StudentHomeView: View {
                     .transition(.scale.combined(with: .opacity))
                     .zIndex(2)
                 }
-            }
-            .confirmationDialog("Switch Role", isPresented: $showRoleSwitcher) {
-                Button("Switch to Teacher") {
-                    Task {
-                        try? await app.switchRole(to: .teacher)
-                    }
-                }
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text("Are you sure you want to switch to teacher mode?")
             }
         }
     }

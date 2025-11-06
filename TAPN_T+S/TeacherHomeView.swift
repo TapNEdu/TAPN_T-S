@@ -3,7 +3,6 @@ import SwiftUI
 struct TeacherHomeView: View {
     @EnvironmentObject var app: AppState
     @State private var showAdd = false
-    @State private var showRoleSwitcher = false
     @State private var classToDelete: ClassSession?
 
     var body: some View {
@@ -74,23 +73,22 @@ struct TeacherHomeView: View {
             }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Menu {
-                        Button(action: { showRoleSwitcher = true }) {
-                            Label("Switch to Student", systemImage: "arrow.left.arrow.right")
-                        }
-                        Button(action: { Task { await app.signOut() } }) {
-                            Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
-                        }
-                    } label: {
-                        Image(systemName: "person.circle.fill")
+                    Button(action: { Task { await app.signOut() } }) {
+                        Image(systemName: "rectangle.portrait.and.arrow.right")
                             .font(.title3)
                             .foregroundStyle(AppTheme.sageGreen)
                     }
                 }
-                
+
                 ToolbarItem(placement: .principal) {
                     Text("Teacher Dashboard")
                         .foregroundStyle(AppTheme.sageGreen)
+                }
+            }
+            .onAppear {
+                // Reload classes when view appears to ensure fresh data
+                Task {
+                    await app.bootstrap()
                 }
             }
             .sheet(isPresented: $showAdd) {
@@ -98,16 +96,6 @@ struct TeacherHomeView: View {
                     app.addClass(subject: subject, timeLabel: time)
                 }
                 .presentationDetents([.fraction(0.35), .medium])
-            }
-            .confirmationDialog("Switch Role", isPresented: $showRoleSwitcher) {
-                Button("Switch to Student") {
-                    Task {
-                        try? await app.switchRole(to: .student)
-                    }
-                }
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text("Are you sure you want to switch to student mode?")
             }
             .confirmationDialog(
                 "Delete Class",
