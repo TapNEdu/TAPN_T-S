@@ -89,7 +89,18 @@ struct TeacherHomeView: View {
                 // Reload classes when view appears to ensure fresh data
                 Task {
                     await app.bootstrap()
+
+                    // Subscribe to real-time updates for all teacher's classes
+                    subscribeToAllClasses()
                 }
+            }
+            .onDisappear {
+                // Unsubscribe from all class subscriptions
+                unsubscribeFromAllClasses()
+            }
+            .onChange(of: app.classes) { _ in
+                // When classes change (new class created), update subscriptions
+                subscribeToAllClasses()
             }
             .sheet(isPresented: $showAdd) {
                 AddClassView { subject, time in
@@ -115,6 +126,21 @@ struct TeacherHomeView: View {
             } message: { cls in
                 Text("Are you sure you want to delete \(cls.subject)? This will remove all attendance records and cannot be undone.")
             }
+        }
+    }
+
+    private func subscribeToAllClasses() {
+        for classSession in app.classes {
+            // Only subscribe if not already subscribed
+            if !RealtimeManager.shared.isSubscribed(to: classSession.id) {
+                RealtimeManager.shared.subscribeToClass(classID: classSession.id)
+            }
+        }
+    }
+
+    private func unsubscribeFromAllClasses() {
+        for classSession in app.classes {
+            RealtimeManager.shared.unsubscribeFromClass(classID: classSession.id)
         }
     }
 }

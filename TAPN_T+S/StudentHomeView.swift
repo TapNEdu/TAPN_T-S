@@ -76,11 +76,21 @@ struct StudentHomeView: View {
                         if let userId = app.currentUser?.id {
                             RealtimeManager.shared.subscribeToUserRoster(userId: userId)
                         }
+
+                        // Subscribe to real-time updates for all rostered classes
+                        subscribeToAllClasses()
                     }
                 }
                 .onDisappear {
-                    // Unsubscribe when view disappears
+                    // Unsubscribe from user roster
                     RealtimeManager.shared.unsubscribeFromUserRoster()
+
+                    // Unsubscribe from all class subscriptions
+                    unsubscribeFromAllClasses()
+                }
+                .onChange(of: app.classes) { _ in
+                    // When classes change (new class added), update subscriptions
+                    subscribeToAllClasses()
                 }
 
                 if showSuccess {
@@ -214,6 +224,21 @@ struct StudentHomeView: View {
             .background(AppTheme.field)
             .foregroundStyle(.white)
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
+    private func subscribeToAllClasses() {
+        for classSession in app.classes {
+            // Only subscribe if not already subscribed
+            if !RealtimeManager.shared.isSubscribed(to: classSession.id) {
+                RealtimeManager.shared.subscribeToClass(classID: classSession.id)
+            }
+        }
+    }
+
+    private func unsubscribeFromAllClasses() {
+        for classSession in app.classes {
+            RealtimeManager.shared.unsubscribeFromClass(classID: classSession.id)
+        }
     }
 }
 
